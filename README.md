@@ -14,5 +14,5 @@ When considering tracks of particular interest, the 4th and 5th piano sonatas co
 ![Energy and valence, Igor Zhukov's performances](plots/energy_valence_Igor_Zhukov.png)
 -  The above figure displays the energy and valence levels for Igor Zhukov's recordings of the sonatas.
 
-
+One thing of note is how espescially the valence levels of Scriabin's late sonatas are very similar, even accros different performers. Their energy levels on the other hand seem to vary a bit more. The variance of both variables also seems greater in his early and middle sonatas. Those might lend themselves to more varying interpretations, as the differences between performers seems to be larger to a certain degree, compared to the late sonatas.
 
