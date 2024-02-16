@@ -6,4 +6,4 @@ One of my goals is to examine wether Scriabin's changing style could be accurate
 
 When considering tracks of particular interest, the 4th and 5th piano sonatas come to mind. The former being one of his first pieces to display a concrete change in style, and the later being one of the first stepts into truly new territory. Yet despite their differences they do both have a distinct touch of lightness that is in my opinion more difficult to find in his other sonatas. A further look into these pieces may yield intriguing results.
 
-[Energy and valence for all performances](plots/energy_valence_all_performances.png)
+![Energy and valence for all performances](plots/energy_valence_all_performances.png)
