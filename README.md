@@ -16,5 +16,4 @@ When considering tracks of particular interest, the 4th and 5th piano sonatas co
 
 One thing of note is how espescially the valence levels of Scriabin's late sonatas are very similar, even accros different performers. Their energy levels on the other hand seem to vary a bit more. The variance of both variables also seems greater in his early and middle sonatas. Those might lend themselves to more varying interpretations, as the differences between performers seems to be larger to a certain degree, compared to the late sonatas. On the other hand, to properly be able to display these differences, adjustments had to be made to the axes. The actual differences in valence and energy are therefore quite small in comparison to their range.
 
-Test change
-
+Another test
