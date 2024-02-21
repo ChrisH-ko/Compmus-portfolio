@@ -5,7 +5,6 @@ date: "2024-02-21"
 output: 
   flexdashboard::flex_dashboard:
     storyboard: true
-    theme: cosmo
 ---
 
 ### Introduction
