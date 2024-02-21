@@ -53,15 +53,22 @@ This is my sidebar.
 ### Conclusion
 
 ```{r}
-chapelle <-
+Lettberg_5 <-
   get_tidy_audio_analysis("0bCTqxYSyYP7OawV9cam1V") |>
   select(segments) |>
   unnest(segments) |>
   select(start, duration, pitches)
 
+Ashkenazy_5 <-
+  get_tidy_audio_analysis("4Au7Ih5wFRc0LZ9sMoT9Z3") |>
+  select(segments) |>
+  unnest(segments) |>
+  select(start, duration, pitches)
+
+
 compmus_long_distance(
-  wood |> mutate(pitches = map(pitches, compmus_normalise, "chebyshev")),
-  chapelle |> mutate(pitches = map(pitches, compmus_normalise, "chebyshev")),
+  Ashkenazy_5 |> mutate(pitches = map(pitches, compmus_normalise, "chebyshev")),
+  Lettberg_5 |> mutate(pitches = map(pitches, compmus_normalise, "chebyshev")),
   feature = pitches,
   method = "euclidean"
 ) |>
@@ -76,7 +83,7 @@ compmus_long_distance(
   ) +
   geom_tile() +
   coord_equal() +
-  labs(x = "The Tallis Scholars", y = "La Chapelle Royale") +
+  labs(x = "Vladimir Ashkenazy", y = "Maria Lettberg", title = "Sonata 5") +
   theme_minimal() +
   scale_fill_viridis_c(guide = NULL)
 ```
