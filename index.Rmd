@@ -14,6 +14,8 @@ remotes::install_github('jaburgoyne/compmus')
 library(tidyverse)
 library(spotifyr)
 library(compmus)
+
+library(plotly)
 ```
 
 
@@ -55,7 +57,7 @@ Test
 
 ### Comparing the energy and valence for all sonatas
 
-```{r}
+```{r Energy_valence}
 all_recordings_mean_energy_valence <- all_recordings %>%
   group_by(pianist, period, sonata) %>%
   summarize(meanEnergy = mean(energy),
@@ -64,19 +66,20 @@ all_recordings_mean_energy_valence <- all_recordings %>%
 zhukov_mean_energy_valence <- all_recordings_mean_energy_valence %>%
   filter(pianist == "Igor Zhukov")
 
-ggplot(zhukov_mean_energy_valence, aes(x = meanEnergy, y = meanValence, color=factor(period, levels=c("Early", "Middle", "Late")),)) +
+zhukov_plot <- ggplot(zhukov_mean_energy_valence, aes(x = meanEnergy, y = meanValence, color=factor(period, levels=c("Early", "Middle", "Late")),)) +
   geom_point() +
   scale_y_log10() +
   scale_x_log10() +
   scale_color_grey(start = 0.75, end = 0) +
-  labs(x="Energy", y="Valence", color="Period", title="Energy and Valence for Scriabin's 10 sonatas | Igor Zhukov") +
+  labs(x="Energy", y="Valence", color="Period", title="Energy and Valence for Scriabin's 10 sonatas",
+       subtitle="Igor Zhukov | The late sonatas have a distinctly low valence level.") +
   annotate("rect", xmin = 0.065, xmax = 0.15, ymin = 0.028, ymax = 0.038,
   alpha = .2) +
   annotate(
     "text",
     x = 0.175, y = 0.028,
     label = "Scriabin's late sonatas",
-    vjust = 1, size = 3, color = "grey40"
+    vjust = 1, size = 5, color = "grey40"
   ) +
   annotate(
     "curve",
@@ -86,70 +89,177 @@ ggplot(zhukov_mean_energy_valence, aes(x = meanEnergy, y = meanValence, color=fa
     color = "grey40"
   ) +
   theme(legend.position = "none")
+
+ggplotly(zhukov_plot)
 ```
+
+***
+
+This plot displays the valence and energy levels of the sonatas performed by Igor Zhukov, just as an example. If you focus on the valence feature, valence being a measure of positiveness, you might notice that while the differences accross sonatas are small, all the late sonatas seem to lay at a distinct valence level compared to the rest.
+
+Those familiar with the music in question might not be suprised by this. These pieces are very representative of Scriabin's changing musical style, despite the fact that they are individually still unique. 
 
 
 ### The late sonatas contain similar valence levels accros all performers
 
-```{r}
-ggplot(all_recordings_mean_energy_valence, aes(x = meanEnergy, y = meanValence, color=factor(period, levels=c("Early", "Middle", "Late")),)) +
+```{r Energy_Valence_all}
+energy_valence_plot <- ggplot(all_recordings_mean_energy_valence, aes(x = meanEnergy, y = meanValence, color=factor(period, levels=c("Early", "Middle", "Late")),)) +
   geom_point() +
   facet_wrap(~ pianist) +
   scale_y_log10() +
   scale_x_log10() +
   scale_color_grey(start = 0.75, end = 0) +
-  labs(x="Energy", y="Valence", color="Period", title="Energy and Valence for Scriabin's 10 sonatas")
+  labs(x="Energy", y="Valence", color="Period", title="Energy and Valence for Scriabin's 10 sonatas",
+       subtitle="The late sonatas have a distinctly low valence level.")
+
+ggplotly(energy_valence_plot)
 ```
 
+***
+
+here you can see the previous results extend very well to other pianists and their recordings. While the energy and valence levels of the early and middle period of Scriabin's works vary quite a bit, the late sonatas all fall on the same range of valence, even across different performers.
+
+At the same time however, the pieces show somewhat of a variance in energy levels across performers. This could perhaps reflect the natural room for interpretation of Scriabin's works, albeit this is hard to say from just this data.
 
 ### How clearly does a chromagram show a sonata's key?
 
-```{r}
-ashkenazy_5 <-
-  get_tidy_audio_analysis("4Au7Ih5wFRc0LZ9sMoT9Z3") |>
+```{r sonata_4_5, include=FALSE}
+ashkenazy_4_1 <-
+  get_tidy_audio_analysis("2NC2ht5e193dy3gNTIJdud") |>
   select(segments) |>
   unnest(segments) |>
   select(start, duration, pitches)
 
+ashkenazy_4_2 <-
+  get_tidy_audio_analysis("4zRZaerPMAAtb3Ys5rGE54") |>
+  select(segments) |>
+  unnest(segments) |>
+  select(start, duration, pitches)
 
-ashkenazy_5 |>
+ashkenazy_4 <- bind_rows(list(ashkenazy_4_1, ashkenazy_4_2)) %>%
+    mutate(sonata = "Sonata 4")
+
+ashkenazy_5 <-
+  get_tidy_audio_analysis("4Au7Ih5wFRc0LZ9sMoT9Z3") |>
+  select(segments) |>
+  unnest(segments) |>
+  select(start, duration, pitches) %>%
+  mutate(sonata = "Sonata 5")
+```
+
+```{r Chromagram_4_and_5}
+ashkenazy_4_chroma <- ashkenazy_4 |>
   mutate(pitches = map(pitches, compmus_normalise, "euclidean")) |>
-  compmus_gather_chroma() |> 
-  ggplot(
-    aes(
+  compmus_gather_chroma()
+
+ashkenazy_5_chroma <- ashkenazy_5 |>
+  mutate(pitches = map(pitches, compmus_normalise, "euclidean")) |>
+  compmus_gather_chroma()
+
+ashkenazy_4_5 <- ggplot(bind_rows(list(ashkenazy_4_chroma, ashkenazy_5_chroma)),
+                            aes(
       x = start + duration / 2,
       width = duration,
       y = pitch_class,
       fill = value
     )
-  ) +
+    ) +
   geom_tile() +
-  labs(x = "Time (s)", y = NULL, fill = "Magnitude") +
+  facet_wrap(~ sonata, dir = "v", scales = "free_x") +
+  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title = "Chromagram of the 4th and 5th sonata", subtitle = "Vladimir Ashkenazy") +
   theme_minimal() +
   scale_fill_viridis_c()
+
+ashkenazy_4_5
 ```
 
+***
+Throughout Scriabin's carreer as a composer, you can quite clearly hear how his music starts getting more and more tonally ambiguous. Even to the point where it might not make much sense to discuss it in terms of tonality.
+
+Take the following chromagrams of the 4th and 5th sonata for example. It is not far fetched to say that Scriabin's music has changed the most between these pieces. As a result, you can still confidently observe how this piece is in F#. The 5th sonata on the other hand does not display display a clear tonic like the previous one does, which makes sense upon giving it a listen.
+
+### From the 5th sonata, each sonata's key starts getting more ambiguous
+
+```{r load_ashkenazy, include=FALSE}
+ashkenazy_2_1 <-
+  get_tidy_audio_analysis("2vNz6dat4cjEJol2AoqIIt") |>
+  select(segments) |>
+  unnest(segments) |>
+  select(start, duration, pitches)
+
+ashkenazy_2_2 <-
+  get_tidy_audio_analysis("6pHp6L7zlZDO5LClxp3pYN") |>
+  select(segments) |>
+  unnest(segments) |>
+  select(start, duration, pitches)
+
+ashkenazy_2 <- bind_rows(list(ashkenazy_4_1, ashkenazy_4_2)) %>%
+  mutate(sonata = "Sonata 2") |>
+  mutate(pitches = map(pitches, compmus_normalise, "euclidean")) |>
+  compmus_gather_chroma()
+
+ashkenazy_6 <-
+  get_tidy_audio_analysis("0NaVN5lDbMkmSwxSiAXMVc") |>
+  select(segments) |>
+  unnest(segments) |>
+  select(start, duration, pitches) %>%
+  mutate(sonata = "Sonata 6") |>
+  mutate(pitches = map(pitches, compmus_normalise, "euclidean")) |>
+  compmus_gather_chroma()
+
+ashkenazy_8 <-
+  get_tidy_audio_analysis("5RKOyVBXa05wImhToOBPcq") |>
+  select(segments) |>
+  unnest(segments) |>
+  select(start, duration, pitches) %>%
+  mutate(sonata = "Sonata 8") |>
+  mutate(pitches = map(pitches, compmus_normalise, "euclidean")) |>
+  compmus_gather_chroma()
+
+ashkenazy_10 <-
+  get_tidy_audio_analysis("27H4M1wOVah2qqHq5xbkeM") |>
+  select(segments) |>
+  unnest(segments) |>
+  select(start, duration, pitches) %>%
+  mutate(sonata = "Sonata 10") |>
+  mutate(pitches = map(pitches, compmus_normalise, "euclidean")) |>
+  compmus_gather_chroma()
+
+chroma_ashkenazy <- list(ashkenazy_2, ashkenazy_4_chroma, ashkenazy_6, ashkenazy_8, ashkenazy_10)
+```
+
+
+```{r Chromagram_ashkenazy, fig.height=600}
+ashkenazy_2_10 <- ggplot(bind_rows(chroma_ashkenazy),
+                            aes(
+      x = start + duration / 2,
+      width = duration,
+      y = pitch_class,
+      fill = value
+    )
+    ) +
+  geom_tile() +
+  facet_wrap(~ sonata, dir = "v", scales = "free_x", ncol = 1, shrink = FALSE) +
+  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title = "Chromagram of various sonatas", subtitle = "Vladimir Ashkenazy") +
+  theme_minimal() +
+  scale_fill_viridis_c()
+
+ashkenazy_2_10
+```
 
 ***
 This is my sidebar.
 
 ### Aligning different performances
 
-```{r}
+```{r DTW}
 Lettberg_5 <-
   get_tidy_audio_analysis("0bCTqxYSyYP7OawV9cam1V") |>
   select(segments) |>
   unnest(segments) |>
   select(start, duration, pitches)
 
-Ashkenazy_5 <-
-  get_tidy_audio_analysis("4Au7Ih5wFRc0LZ9sMoT9Z3") |>
-  select(segments) |>
-  unnest(segments) |>
-  select(start, duration, pitches)
-
-
-compmus_long_distance(
+DTW_plot <- compmus_long_distance(
   Ashkenazy_5 |> mutate(pitches = map(pitches, compmus_normalise, "chebyshev")),
   Lettberg_5 |> mutate(pitches = map(pitches, compmus_normalise, "chebyshev")),
   feature = pitches,
@@ -169,6 +279,8 @@ compmus_long_distance(
   labs(x = "Vladimir Ashkenazy", y = "Maria Lettberg", title = "Sonata 5") +
   theme_minimal() +
   scale_fill_viridis_c(guide = NULL)
+
+DTW_plot
 ```
 
 ### Discussion
