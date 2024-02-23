@@ -7,29 +7,109 @@ output:
     storyboard: true
 ---
 
-### Introduction
-
-Welcome to my portfolio!
-
-### Visualizations
-
-This page will show my beautiful plots.
-
-```{r}
+```{r setup, include=FALSE}
 remotes::install_github('jaburgoyne/compmus')
 
 library(tidyverse)
 library(spotifyr)
 library(compmus)
+```
 
-wood <-
+
+```{r corpus, include=FALSE}
+lettberg <- get_playlist_audio_features("", "3sdlcRjy5BTP7n3wYAv9SM") %>%
+    mutate(sonata = as.numeric(gsub(".*?([0-9]+).*", "\\1", track.name))) %>%
+  mutate(pianist = "Maria Lettberg")
+
+ashkenazy <- get_playlist_audio_features("", "7bWfdaHsWluY72lP03tmBm") %>%
+    mutate(sonata = as.numeric(gsub(".*?([0-9]+).*", "\\1", track.name))) %>%
+    mutate(sonata = replace(sonata, sonata == 19, 2)) %>%
+    mutate(pianist = "Vladimir Ashkenazy")
+
+alexeev <- get_playlist_audio_features("", "06t6MgQ4xonM7npcnVNrRp") %>%
+    mutate(sonata = as.numeric(gsub(".*?([0-9]+).*", "\\1", track.name))) %>%
+    mutate(pianist = "Dmitri Alexeev")
+
+zhukov <- get_playlist_audio_features("", "5EpGR6eUJkYDebReri1zdN") %>%
+    mutate(sonata = as.numeric(gsub(".*?([0-9]+).*", "\\1", track.name))) %>%
+    mutate(pianist = "Igor Zhukov")
+
+pianists <- list(lettberg, ashkenazy, alexeev, zhukov)
+all_recordings <- bind_rows(pianists) %>%
+    mutate(period = replace(sonata, sonata < 11, "Late")) %>%
+    mutate(period = replace(period, sonata < 6, "Middle")) %>%
+    mutate(period = replace(period, sonata < 4, "Early"))
+```
+
+
+### The style of Scriabin 
+
+There are many composers who have made a name for themselves when it comes to their contribution to the piano repertoire. One such composer is Alexander Scriabin. However, what seperates him from other composers of similar regard, is the way in which his musical language has developed throughout his life. The influence of Frederic Chopin and other romantic composers can clearly be discerned at the start of his carreer. In spite of that, his music would increasingly veer away from traditional harmony and tonality over the turn of the 20th century. Much like Arnold Schoenberg, he had developed a unique, modernist style of music that would influence many other 20th century composers.
+
+One of my goals is to examine wether Scriabin's changing style could be accurately represented. This development is perhaps best reflected in Scriabin's 10 piano sonatas, which span the majority of his composing carreer. My corpus therefore consists of recordings of these sonatas by four pianists, namely Vladimir Ashkenazy, Maria Lettberg, Igor Zhukov and Dmitri Alexeev. These pieces, much like his other works, leave the performer with room for their own interpretation. So It would perhaps also be interesting to see in what capacity spotify could measure the difference between performers.
+
+When considering tracks of particular interest, the 4th and 5th piano sonatas come to mind. The former being one of his first pieces to display a concrete change in style, and the later being one of the first stepts into truly new territory. Yet despite their differences they do both have a distinct touch of lightness that is in my opinion more difficult to find in his other sonatas. A further look into these pieces may yield intriguing results.
+
+### Comparing the energy and valence for all sonatas
+
+```{r}
+all_recordings_mean_energy_valence <- all_recordings %>%
+  group_by(pianist, period, sonata) %>%
+  summarize(meanEnergy = mean(energy),
+            meanValence = mean(valence))
+
+zhukov_mean_energy_valence <- all_recordings_mean_energy_valence %>%
+  filter(pianist == "Igor Zhukov")
+
+ggplot(zhukov_mean_energy_valence, aes(x = meanEnergy, y = meanValence, color=factor(period, levels=c("Early", "Middle", "Late")),)) +
+  geom_point() +
+  scale_y_log10() +
+  scale_x_log10() +
+  scale_color_grey(start = 0.75, end = 0) +
+  labs(x="Energy", y="Valence", color="Period", title="Energy and Valence for Scriabin's 10 sonatas | Igor Zhukov") +
+  annotate("rect", xmin = 0.065, xmax = 0.15, ymin = 0.028, ymax = 0.038,
+  alpha = .2) +
+  annotate(
+    "text",
+    x = 0.175, y = 0.028,
+    label = "Scriabin's late sonatas",
+    vjust = 1, size = 3, color = "grey40"
+  ) +
+  annotate(
+    "curve",
+    x = 0.175, y = 0.028,
+    xend = 0.155, yend = 0.033,
+    arrow = arrow(length = unit(0.15, "cm"), type = "closed"),
+    color = "grey40"
+  ) +
+  theme(legend.position = "none")
+```
+
+
+### The late sonatas contain similar valence levels accros all performers
+
+```{r}
+ggplot(all_recordings_mean_energy_valence, aes(x = meanEnergy, y = meanValence, color=factor(period, levels=c("Early", "Middle", "Late")),)) +
+  geom_point() +
+  facet_wrap(~ pianist) +
+  scale_y_log10() +
+  scale_x_log10() +
+  scale_color_grey(start = 0.75, end = 0) +
+  labs(x="Energy", y="Valence", color="Period", title="Energy and Valence for Scriabin's 10 sonatas")
+```
+
+
+### How clearly does a chromagram show a sonata's key?
+
+```{r}
+ashkenazy_5 <-
   get_tidy_audio_analysis("4Au7Ih5wFRc0LZ9sMoT9Z3") |>
   select(segments) |>
   unnest(segments) |>
   select(start, duration, pitches)
 
 
-wood |>
+ashkenazy_5 |>
   mutate(pitches = map(pitches, compmus_normalise, "euclidean")) |>
   compmus_gather_chroma() |> 
   ggplot(
@@ -50,7 +130,7 @@ wood |>
 ***
 This is my sidebar.
 
-### Conclusion
+### Aligning different performances
 
 ```{r}
 Lettberg_5 <-
@@ -88,5 +168,6 @@ compmus_long_distance(
   scale_fill_viridis_c(guide = NULL)
 ```
 
+### Discussion
 
 This page will list my conlcusions.
