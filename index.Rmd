@@ -14,7 +14,7 @@ remotes::install_github('jaburgoyne/compmus')
 library(tidyverse)
 library(spotifyr)
 library(compmus)
-
+library(cowplot)
 library(plotly)
 ```
 
@@ -193,10 +193,34 @@ ashkenazy_2_2 <-
   unnest(segments) |>
   select(start, duration, pitches)
 
-ashkenazy_2 <- bind_rows(list(ashkenazy_4_1, ashkenazy_4_2)) %>%
+ashkenazy_2 <- bind_rows(list(ashkenazy_2_1, ashkenazy_2_2)) %>%
   mutate(sonata = "Sonata 2") |>
   mutate(pitches = map(pitches, compmus_normalise, "euclidean")) |>
-  compmus_gather_chroma()
+  compmus_gather_chroma() |>
+  ggplot(aes(
+      x = start + duration / 2,
+      width = duration,
+      y = pitch_class,
+      fill = value
+    )
+    ) +
+  geom_tile() +
+  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title = "Chromagram of various sonatas") +
+  theme_minimal() +
+  scale_fill_viridis_c()
+
+ashkenazy_4_chroma <- ashkenazy_4_chroma |>
+  ggplot(aes(
+      x = start + duration / 2,
+      width = duration,
+      y = pitch_class,
+      fill = value
+    )
+    ) +
+  geom_tile() +
+  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title = "Chromagram of various sonatas") +
+  theme_minimal() +
+  scale_fill_viridis_c()
 
 ashkenazy_6 <-
   get_tidy_audio_analysis("0NaVN5lDbMkmSwxSiAXMVc") |>
@@ -205,7 +229,18 @@ ashkenazy_6 <-
   select(start, duration, pitches) %>%
   mutate(sonata = "Sonata 6") |>
   mutate(pitches = map(pitches, compmus_normalise, "euclidean")) |>
-  compmus_gather_chroma()
+  compmus_gather_chroma() |>
+  ggplot(aes(
+      x = start + duration / 2,
+      width = duration,
+      y = pitch_class,
+      fill = value
+    )
+    ) +
+  geom_tile() +
+  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title = "Chromagram of various sonatas") +
+  theme_minimal() +
+  scale_fill_viridis_c()
 
 ashkenazy_8 <-
   get_tidy_audio_analysis("5RKOyVBXa05wImhToOBPcq") |>
@@ -214,7 +249,18 @@ ashkenazy_8 <-
   select(start, duration, pitches) %>%
   mutate(sonata = "Sonata 8") |>
   mutate(pitches = map(pitches, compmus_normalise, "euclidean")) |>
-  compmus_gather_chroma()
+  compmus_gather_chroma() |>
+  ggplot(aes(
+      x = start + duration / 2,
+      width = duration,
+      y = pitch_class,
+      fill = value
+    )
+    ) +
+  geom_tile() +
+  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title = "Chromagram of various sonatas") +
+  theme_minimal() +
+  scale_fill_viridis_c()
 
 ashkenazy_10 <-
   get_tidy_audio_analysis("27H4M1wOVah2qqHq5xbkeM") |>
@@ -223,15 +269,8 @@ ashkenazy_10 <-
   select(start, duration, pitches) %>%
   mutate(sonata = "Sonata 10") |>
   mutate(pitches = map(pitches, compmus_normalise, "euclidean")) |>
-  compmus_gather_chroma()
-
-chroma_ashkenazy <- list(ashkenazy_2, ashkenazy_4_chroma, ashkenazy_6, ashkenazy_8, ashkenazy_10)
-```
-
-
-```{r Chromagram_ashkenazy, fig.height=600}
-ashkenazy_2_10 <- ggplot(bind_rows(chroma_ashkenazy),
-                            aes(
+  compmus_gather_chroma() |>
+  ggplot(aes(
       x = start + duration / 2,
       width = duration,
       y = pitch_class,
@@ -239,12 +278,15 @@ ashkenazy_2_10 <- ggplot(bind_rows(chroma_ashkenazy),
     )
     ) +
   geom_tile() +
-  facet_wrap(~ sonata, dir = "v", scales = "free_x", ncol = 1, shrink = FALSE) +
-  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title = "Chromagram of various sonatas", subtitle = "Vladimir Ashkenazy") +
+  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title = "Chromagram of various sonatas") +
   theme_minimal() +
   scale_fill_viridis_c()
 
-ashkenazy_2_10
+chroma_ashkenazy <- list(ashkenazy_2, ashkenazy_4_chroma, ashkenazy_6, ashkenazy_8, ashkenazy_10)
+```
+
+```{r Chromagram_ashkenazy, fig.height=12, fig.width=8}
+plot_grid(plotlist = chroma_ashkenazy, ncol = 1)
 ```
 
 ***
@@ -253,15 +295,15 @@ This is my sidebar.
 ### Aligning different performances
 
 ```{r DTW}
-Lettberg_5 <-
+lettberg_5 <-
   get_tidy_audio_analysis("0bCTqxYSyYP7OawV9cam1V") |>
   select(segments) |>
   unnest(segments) |>
   select(start, duration, pitches)
 
 DTW_plot <- compmus_long_distance(
-  Ashkenazy_5 |> mutate(pitches = map(pitches, compmus_normalise, "chebyshev")),
-  Lettberg_5 |> mutate(pitches = map(pitches, compmus_normalise, "chebyshev")),
+  ashkenazy_5 |> mutate(pitches = map(pitches, compmus_normalise, "chebyshev")),
+  lettberg_5 |> mutate(pitches = map(pitches, compmus_normalise, "chebyshev")),
   feature = pitches,
   method = "euclidean"
 ) |>
