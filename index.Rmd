@@ -77,7 +77,7 @@ zhukov_plot <- ggplot(zhukov_mean_energy_valence, aes(x = meanEnergy, y = meanVa
   alpha = .2) +
   annotate(
     "text",
-    x = 0.175, y = 0.028,
+    x = 0.1, y = 0.04,
     label = "Scriabin's late sonatas",
     vjust = 1, size = 5, color = "grey40"
   ) +
@@ -128,13 +128,16 @@ ashkenazy_4_1 <-
   get_tidy_audio_analysis("2NC2ht5e193dy3gNTIJdud") |>
   select(segments) |>
   unnest(segments) |>
-  select(start, duration, pitches)
+  select(start, duration, pitches) %>%
+  mutate(movement = 1)
 
 ashkenazy_4_2 <-
   get_tidy_audio_analysis("4zRZaerPMAAtb3Ys5rGE54") |>
   select(segments) |>
   unnest(segments) |>
-  select(start, duration, pitches)
+  select(start, duration, pitches) %>%
+  mutate(movement = 2,
+         start = start + tail(ashkenazy_4_1, n=1)$start)
 
 ashkenazy_4 <- bind_rows(list(ashkenazy_4_1, ashkenazy_4_2)) %>%
     mutate(sonata = "Sonata 4")
@@ -146,6 +149,7 @@ ashkenazy_5 <-
   select(start, duration, pitches) %>%
   mutate(sonata = "Sonata 5")
 ```
+
 
 ```{r Chromagram_4_and_5}
 ashkenazy_4_chroma <- ashkenazy_4 |>
@@ -176,7 +180,7 @@ ashkenazy_4_5
 ***
 Throughout Scriabin's carreer as a composer, you can quite clearly hear how his music starts getting more and more tonally ambiguous. Even to the point where it might not make much sense to discuss it in terms of tonality.
 
-Take the following chromagrams of the 4th and 5th sonata for example. It is not far fetched to say that Scriabin's music has changed the most between these pieces. As a result, you can still confidently observe how this piece is in F#. The 5th sonata on the other hand does not display display a clear tonic like the previous one does, which makes sense upon giving it a listen.
+Take the following chromagrams of the 4th and 5th sonata for example. It is not far fetched to say that Scriabin's music has changed the most between these pieces. As a result, you can, albeit without the most confidence, observe how this piece is in F#. The 5th sonata on the other hand does not display display a clear tonic like the previous one does, which makes sense upon giving it a listen.
 
 ### From the 5th sonata, each sonata's key starts getting more ambiguous
 
@@ -191,7 +195,8 @@ ashkenazy_2_2 <-
   get_tidy_audio_analysis("6pHp6L7zlZDO5LClxp3pYN") |>
   select(segments) |>
   unnest(segments) |>
-  select(start, duration, pitches)
+  select(start, duration, pitches) %>%
+  mutate(start = start + tail(ashkenazy_2_1, n=1)$start)
 
 ashkenazy_2 <- bind_rows(list(ashkenazy_2_1, ashkenazy_2_2)) %>%
   mutate(sonata = "Sonata 2") |>
@@ -205,7 +210,7 @@ ashkenazy_2 <- bind_rows(list(ashkenazy_2_1, ashkenazy_2_2)) %>%
     )
     ) +
   geom_tile() +
-  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title = "Chromagram of various sonatas") +
+  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title = "Sonata 2") +
   theme_minimal() +
   scale_fill_viridis_c()
 
@@ -218,7 +223,7 @@ ashkenazy_4_chroma <- ashkenazy_4_chroma |>
     )
     ) +
   geom_tile() +
-  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title = "Chromagram of various sonatas") +
+  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title = "Sonata 4") +
   theme_minimal() +
   scale_fill_viridis_c()
 
@@ -238,7 +243,7 @@ ashkenazy_6 <-
     )
     ) +
   geom_tile() +
-  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title = "Chromagram of various sonatas") +
+  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title = "Sonata 6") +
   theme_minimal() +
   scale_fill_viridis_c()
 
@@ -258,7 +263,7 @@ ashkenazy_8 <-
     )
     ) +
   geom_tile() +
-  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title = "Chromagram of various sonatas") +
+  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title = "Sonata 8") +
   theme_minimal() +
   scale_fill_viridis_c()
 
@@ -278,19 +283,23 @@ ashkenazy_10 <-
     )
     ) +
   geom_tile() +
-  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title = "Chromagram of various sonatas") +
+  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title = "Sonata 10") +
   theme_minimal() +
   scale_fill_viridis_c()
 
 chroma_ashkenazy <- list(ashkenazy_2, ashkenazy_4_chroma, ashkenazy_6, ashkenazy_8, ashkenazy_10)
+
 ```
 
-```{r Chromagram_ashkenazy, fig.height=12, fig.width=8}
+
+```{r Chromagram_ashkenazy, fig.height=16, fig.width=10, class.output="large_plot"}
 plot_grid(plotlist = chroma_ashkenazy, ncol = 1)
 ```
 
 ***
-This is my sidebar.
+Here are a couple more chromagrams. Let's look at a couple more pieces, once again performed by Vladimir Ashkenazy just for an example.
+
+<br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br>
 
 ### Aligning different performances
 
