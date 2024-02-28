@@ -58,35 +58,30 @@ When considering tracks of particular interest, the 4th and 5th piano sonatas co
 ```{r Energy_valence}
 all_recordings_mean_energy_valence <- all_recordings %>%
   group_by(pianist, period, sonata) %>%
-  summarize(meanEnergy = mean(energy),
-            meanValence = mean(valence))
+  summarize(mean_energy = mean(energy),
+            mean_valence = mean(valence),
+            period = factor(period, levels=c("Early", "Middle", "Late")))
 
 zhukov_mean_energy_valence <- all_recordings_mean_energy_valence %>%
   filter(pianist == "Igor Zhukov")
 
-zhukov_plot <- ggplot(zhukov_mean_energy_valence, aes(x = meanEnergy, y = meanValence, color=factor(period, levels=c("Early", "Middle", "Late")),)) +
+cols <- c("Early" = "#c2df23", "Middle" = "#1fa187", "Late" = "#440154")
+
+zhukov_plot <- ggplot(zhukov_mean_energy_valence, aes(x = mean_energy, y = mean_valence, color= period)) +
+  annotate("rect", xmin = 0.065, xmax = 0.15, ymin = 0.028, ymax = 0.038, alpha = .2) +
   geom_point() +
   scale_y_log10() +
   scale_x_log10() +
-  scale_color_grey(start = 0.75, end = 0) +
+  # scale_color_grey(start = 0.75, end = 0) +
   labs(x="Energy", y="Valence", color="Period", title="Energy and Valence for Scriabin's 10 sonatas",
        subtitle="Igor Zhukov | The late sonatas have a distinctly low valence level.") +
-  annotate("rect", xmin = 0.065, xmax = 0.15, ymin = 0.028, ymax = 0.038,
-  alpha = .2) +
   annotate(
     "text",
     x = 0.1, y = 0.04,
     label = "Scriabin's late sonatas",
     vjust = 1, size = 5, color = "grey40"
   ) +
-  annotate(
-    "curve",
-    x = 0.175, y = 0.028,
-    xend = 0.155, yend = 0.033,
-    arrow = arrow(length = unit(0.15, "cm"), type = "closed"),
-    color = "grey40"
-  ) +
-  theme(legend.position = "none")
+  scale_color_manual(values = cols)                         
 
 ggplotly(zhukov_plot)
 ```
@@ -101,12 +96,12 @@ Those familiar with the music in question might not be suprised by this. These p
 ### The late sonatas contain similar valence levels accros all performers
 
 ```{r Energy_Valence_all}
-energy_valence_plot <- ggplot(all_recordings_mean_energy_valence, aes(x = meanEnergy, y = meanValence, color=factor(period, levels=c("Early", "Middle", "Late")),)) +
+energy_valence_plot <- ggplot(all_recordings_mean_energy_valence, aes(x = mean_energy, y = mean_valence, color= period)) +
   geom_point() +
   facet_wrap(~ pianist) +
   scale_y_log10() +
   scale_x_log10() +
-  scale_color_grey(start = 0.75, end = 0) +
+  scale_color_manual(values = cols) +
   labs(x="Energy", y="Valence", color="Period", title="Energy and Valence for Scriabin's 10 sonatas",
        subtitle="The late sonatas have a distinctly low valence level.")
 
