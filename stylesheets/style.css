@@ -1,0 +1,30 @@
+body{
+  font-family: Helvetica;
+  font-size: 16pt;
+}
+
+.navbar-inverse {
+  background-color: #1fa187;
+  border-color: ##1b6b5b;
+}
+
+h1,h2,h3,h4,h5,h6{
+  font-size: 24pt;
+}
+
+.sbframe-commentary {
+  font-size: 18px;
+  width: 450px;
+}
+
+p {
+  margin: 0 0 20.5px;
+}
+
+.storyboard-nav .sbframelist ul li.active {
+  background-color: #1fa187;
+}
+
+.storyboard-nav .sbframelist ul li {
+  font-size: 18px;
+}

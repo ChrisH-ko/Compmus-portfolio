@@ -32,6 +32,10 @@ all_recordings <- bind_rows(pianists) %>%
     mutate(period = replace(period, sonata < 4, "Early"))
 ```
 
+```{r theme, include=FALSE}
+custom_theme <- theme(plot.background = element_rect(fill = "#353d3a"),
+                      )
+```
 
 ### The style of Scriabin 
 
@@ -69,7 +73,7 @@ zhukov_plot <- ggplot(zhukov_mean_energy_valence, aes(x = mean_energy, y = mean_
     label = "Scriabin's late sonatas",
     vjust = 1, size = 5, color = "grey40"
   ) +
-  scale_color_manual(values = cols)                         
+  scale_color_manual(values = cols)
 
 ggplotly(zhukov_plot)
 ```
@@ -378,7 +382,7 @@ chroma_and_timbre <- function(sonata) {
     timbre =
       map(segments,
         compmus_summarise, timbre,
-        method = "rms", norm = "euclidean"              # Change summary & norm.
+        method = "rms", norm = "euclidean"             # Change summary & norm.
       )
   )
 }
@@ -406,41 +410,61 @@ self_similarity <- function(sonata, chroma) {
     coord_fixed() +
     scale_fill_viridis_c(guide = "none") +
     theme_classic() +
-    labs(x = "", y = "")
+    labs(x = "", y = "") +
+    scale_x_continuous(breaks=seq(0,2000,60)) +
+    scale_y_continuous(breaks=seq(0,2000,60))
 }
 ```
 
 ```{r}
 timbre_analysis <- list(lettberg_1_1,
-                        lettberg_10_1,
-                        lettberg_9_1,
-                        lettberg_7_1)
+                        lettberg_8_1)
 
 timbre_analysis <- lapply(timbre_analysis, chroma_and_timbre)
 ```
 
 ```{r}
 sonata_1 <- timbre_analysis[[1]]
-sonata_9 <- timbre_analysis[[3]]
-sonata_10 <- timbre_analysis[[2]]
+sonata_8 <- timbre_analysis[[2]]
 
 
 cep_1 <- sonata_1 |>
   compmus_gather_timbre() |>
   chromagram(chroma = FALSE) +
-    geom_vline(xintercept = 151, colour = "red")
+    geom_vline(xintercept = 151, colour = "red") +
+    geom_vline(xintercept = 299, colour = "red") +
+    labs(title = "Cepstrogram of the 1st sonata", subtitle = "Maria Lettberg")
 
-cep_9 <- sonata_10 |>
+
+cep_8 <- sonata_8 |>
   compmus_gather_timbre() |>
-  chromagram(chroma = FALSE)
+  chromagram(chroma = FALSE) +
+  labs(title = "Cepstrogram of the 8th sonata", subtitle = "Maria Lettberg") +
+  geom_vline(xintercept = 140, colour = "red")
 
-plot_grid(plotlist = list(cep_1, cep_9), ncol = 1)
+
+plot_grid(plotlist = list(cep_1, cep_8), ncol = 1)
 ```
 
 ***
-text.
+Similarly to the chromagrams, spotify also allows us to analyse the timbre content of the pieces, referred to as Cepstrograms.
+However, solo piano works don't always lend themselves to this type of analysis, since you are generally limited in the kinds of timbres
+you can create with just a piano, unless you start employing extended techniques like in [george crumb's](https://youtu.be/pIEUS0-DDcs) case for instance. Regardless, there are instances where a pieces's eccentricities are reflected in its cepstrogram.
+
+Consider a sonata's structure for example. One defining aspect of the sonata is how its first movement is composed in sonata form. Although like most musical conventions, composers have been straying from this practice over time, including Scriabin. Despite that, his first sonata does display a strong semblance of sonata form. When looking at the cepstrogram, you can make out how the exposition section is repeated once in the sonata's beginning.
+
+Structural details like this are hard to find in his other sonatas, as they are written . It is quite tough to define an overarching structure in his 8th sonata for instance. Instead, this sonata 
 
 ### Self similarity
+```{r}
+timbre_analysis <- list(lettberg_2_1,
+                        lettberg_7_1)
+
+timbre_analysis <- lapply(timbre_analysis, chroma_and_timbre)
+
+sonata_2 <- timbre_analysis[[1]]
+sonata_7 <- timbre_analysis[[2]]
+```
 
 ```{r}
 selfsim_chroma_1 <- self_similarity(sonata_1, chroma=TRUE)
@@ -455,8 +479,8 @@ Text.
 ### test
 
 ```{r}
-selfsim_chroma_1 <- self_similarity(sonata_9, chroma=TRUE)
-selfsim_timbre_1 <- self_similarity(sonata_9, chroma=FALSE)
+selfsim_chroma_1 <- self_similarity(sonata_8, chroma=TRUE)
+selfsim_timbre_1 <- self_similarity(sonata_8, chroma=FALSE)
 
 plot_grid(plotlist = list(selfsim_chroma_1, selfsim_timbre_1))
 ```
