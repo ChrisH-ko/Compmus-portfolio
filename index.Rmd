@@ -211,7 +211,9 @@ plot_grid(plotlist = list(selfsim_chroma_7, selfsim_timbre_7))
 ```
 
 ***
-As Scriabin started breaking away from conventional late-romanticism, he also began applying structure to his pieces in a different way.
+As Scriabin started breaking away from conventional late-romanticism, he also began applying structure to his pieces in a different way. Rather than repetition, Scriabin utilizes many different motifs that he transforms, combines, transposes and puts into different contexts. What then defines the different sections of these pieces is how these motifs are applied. Two sections might be related through a motif appearing in a similar context, despite being modulated, in a different register or altered. This makes it very difficult to find any meaning these self-similarity matrices, as the sonatas' structures are not defined by either pitch nor timbre. Not to mention how there's is little to go off of on timbre. Let alone how these pieces' actual structures are up to debate.
+
+When specifically looking at the matrices of the seventh sonata, we can once more see instances of prolonged silence in the timbre matrix. This piece does follow some semblance of sonata form, however as expected it does not really show in either matrix. You can vaguely make out how the piece goes from one section to another at around 390 seconds in. The pitch matrix show that the material before and after that point are quite dissimilar. This matches up where one could consider the recapitulation of the sonata to be, since it sounds like a retelling of the beginning of the piece.
 
 ### The style of Scriabin 
 
