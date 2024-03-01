@@ -18,7 +18,6 @@ library(cowplot)
 library(plotly)
 ```
 
-
 ```{r corpus, include=FALSE}
 lettberg <- readRDS(file = "data/playlists/lettberg-playlist.RDS")
 ashkenazy <- readRDS(file = "data/playlists/ashkenazy-playlist.RDS")
@@ -32,10 +31,187 @@ all_recordings <- bind_rows(pianists) %>%
     mutate(period = replace(period, sonata < 4, "Early"))
 ```
 
-```{r theme, include=FALSE}
-custom_theme <- theme(plot.background = element_rect(fill = "#353d3a"),
-                      )
+```{r functions_chromagram, include=FALSE}
+chroma_preprocessing <- function(sonata) {
+  sonata <- sonata |>
+  select(segments) |>
+  unnest(segments) |>
+  select(start, duration, pitches)
+}
+
+chromagram <- function(sonata, chroma) {
+  if (chroma) {
+    plot <- ggplot(sonata,
+         aes(x = start + duration / 2,
+            width = duration,
+            y = pitch_class,
+            fill = value
+            )
+        )
+  } else {
+    plot <- ggplot(sonata,
+         aes(x = start + duration / 2,
+            width = duration,
+            y = basis,
+            fill = value
+            )
+        )
+  }
+  
+  plot +
+  geom_tile() +
+  labs(x = "Time (s)", y = NULL, fill = "Magnitude") +
+  theme_classic() +
+  scale_fill_viridis_c() +
+  scale_x_continuous(breaks=seq(0,2000,60))
+}
 ```
+
+### It is difficult to gather much information out of timbre
+
+```{r  self_similarity, include=FALSE}
+lettberg_1_1 <- readRDS(file = "data/pieces/lettberg/lettberg_1_1.RDS")
+lettberg_2_1 <- readRDS(file = "data/pieces/lettberg/lettberg_2_1.RDS")
+lettberg_3_1 <- readRDS(file = "data/pieces/lettberg/lettberg_3_1.RDS")
+lettberg_4_1 <- readRDS(file = "data/pieces/lettberg/lettberg_4_1.RDS")
+lettberg_5_1 <- readRDS(file = "data/pieces/lettberg/lettberg_5_1.RDS")
+lettberg_6_1 <- readRDS(file = "data/pieces/lettberg/lettberg_6_1.RDS")
+lettberg_7_1 <- readRDS(file = "data/pieces/lettberg/lettberg_7_1.RDS")
+lettberg_8_1 <- readRDS(file = "data/pieces/lettberg/lettberg_8_1.RDS")
+lettberg_9_1 <- readRDS(file = "data/pieces/lettberg/lettberg_9_1.RDS")
+lettberg_10_1 <- readRDS(file = "data/pieces/lettberg/lettberg_10_1.RDS")
+```
+
+```{r functions_timbre_selfsim, include=FALSE}
+chroma_and_timbre <- function(sonata) {
+  sonata <- sonata |>
+  compmus_align(bars, segments) |>                     # Change `bars`
+  select(bars) |>                                      #   in all three
+  unnest(bars) |>                                      #   of these lines.
+  mutate(
+    pitches =
+      map(segments,
+        compmus_summarise, pitches,
+        method = "rms", norm = "euclidean"              # Change summary & norm.
+      )
+  ) |>
+  mutate(
+    timbre =
+      map(segments,
+        compmus_summarise, timbre,
+        method = "rms", norm = "euclidean"             # Change summary & norm.
+      )
+  )
+}
+
+self_similarity <- function(sonata, chroma) {
+  if (chroma) {
+    plot <- sonata |>
+      compmus_self_similarity(pitches, "cosine") 
+  } else {
+    plot <- sonata |>
+      compmus_self_similarity(timbre, "cosine") 
+  }
+  
+  plot |> 
+    ggplot(
+      aes(
+        x = xstart + xduration / 2,
+        width = xduration,
+        y = ystart + yduration / 2,
+        height = yduration,
+        fill = d
+      )
+    ) +
+    geom_tile() +
+    coord_fixed() +
+    scale_fill_viridis_c(guide = "none") +
+    theme_classic() +
+    labs(x = "", y = "") +
+    scale_x_continuous(breaks=seq(0,2000,60)) +
+    scale_y_continuous(breaks=seq(0,2000,60)) +
+    theme(axis.text.x = element_text(angle=-45))
+}
+```
+
+```{r}
+timbre_analysis <- list(lettberg_1_1,
+                        lettberg_8_1)
+
+timbre_analysis <- lapply(timbre_analysis, chroma_and_timbre)
+```
+
+```{r}
+sonata_1 <- timbre_analysis[[1]]
+sonata_8 <- timbre_analysis[[2]]
+
+
+cep_1 <- sonata_1 |>
+  compmus_gather_timbre() |>
+  chromagram(chroma = FALSE) +
+    geom_vline(xintercept = 151, colour = "red") +
+    geom_vline(xintercept = 299, colour = "red") +
+    labs(title = "Cepstrogram of the 1st sonata", subtitle = "Maria Lettberg")
+
+
+cep_8 <- sonata_8 |>
+  compmus_gather_timbre() |>
+  chromagram(chroma = FALSE) +
+  labs(title = "Cepstrogram of the 8th sonata", subtitle = "Maria Lettberg") +
+  geom_vline(xintercept = 140, colour = "red")
+
+
+plot_grid(plotlist = list(cep_1, cep_8), ncol = 1)
+```
+
+***
+Similarly to the chromagrams, spotify also allows us to analyse the timbre content of the pieces, referred to as Cepstrograms.
+However, solo piano works don't always lend themselves to this type of analysis, since you are generally limited in the kinds of timbres
+you can create with just a piano, unless you start employing extended techniques like in [George Crumb's](https://youtu.be/pIEUS0-DDcs) case for instance. Regardless, there are instances where a pieces's eccentricities are reflected in its cepstrogram.
+
+Consider a sonata's structure for example. One defining aspect of the sonata is how its first movement is composed in sonata form. Although like most musical conventions, composers have been straying from this practice over time, including Scriabin. Despite that, his first sonata does display a strong semblance of sonata form. When looking at the cepstrogram, you can make out how the exposition section is repeated once in the sonata's beginning.
+
+Structural details like this are hard to find in his other sonatas, especially when only looking at pitch and timbre. It is quite tough to define an overarching structure in his 8th sonata for instance. Nevertheless, you can clearly see the first 2 minutes being distinct from the rest of the piece. Upon giving this sonata a listen, you'll notice that this section is noticeably unnerving yet tranquil.
+
+### The structure of Scriabin's sonatas is not always easy to define
+
+```{r}
+timbre_analysis <- list(lettberg_2_1,
+                        lettberg_7_1)
+
+timbre_analysis <- lapply(timbre_analysis, chroma_and_timbre)
+
+sonata_2 <- timbre_analysis[[1]]
+sonata_7 <- timbre_analysis[[2]]
+```
+
+```{r}
+selfsim_chroma_1 <- self_similarity(sonata_1, chroma=TRUE) +
+  labs(title = "Pitch | Sonata No. 1", subtitle = "Maria Lettberg")
+selfsim_timbre_1 <- self_similarity(sonata_1, chroma=FALSE) +
+  labs(title = "Timbre | Sonata No. 1", subtitle = "Maria Lettberg")
+
+plot_grid(plotlist = list(selfsim_chroma_1, selfsim_timbre_1)) + labs(title = "Self similarity matrices")
+```
+
+***
+These plots display the pitch and timbre-based self-similarity within Scriabin's first sonata. While the Timbre matrix does not seem to divulge much, since the overall timbre of the piece does not vary much, you can still make out how there's one bar after around 150 seconds where there's a large pause. Other than that, the plot does not tell us much.
+
+The pitch-based self-similarity matrix on the other hand does clearly display the repetition of the sonata's exposition. As seen in how there's a dark blue line parallel to the diagonal of the matrix, indicating that two different sections of the piece overlap. The development and recapitulation are a bit harder to make out. However if you look closely, you can just barely see a very short dark blue diagonal line starting at 420 seconds on the x axis. This line is very short since the recapitulation almost immediately modulates to a different key.
+
+### Self-similarity matrices help very little with the later sonatas
+
+```{r}
+selfsim_chroma_7 <- self_similarity(sonata_7, chroma=TRUE) +
+  labs(title = "Pitch | Sonata No. 7", subtitle = "Maria Lettberg")
+selfsim_timbre_7 <- self_similarity(sonata_7, chroma=FALSE) +
+  labs(title = "Timbre | Sonata No. 7", subtitle = "Maria Lettberg")
+
+plot_grid(plotlist = list(selfsim_chroma_7, selfsim_timbre_7))
+```
+
+***
+As Scriabin started breaking away from conventional late-romanticism, he also began applying structure to his pieces in a different way.
 
 ### The style of Scriabin 
 
@@ -116,40 +292,6 @@ ashkenazy_5 <- readRDS(file = "data/pieces/ashkenazy/ashkenazy_5_1.RDS")
 chroma_comparison <- list(ashkenazy_4_1,
                           ashkenazy_4_2,
                           ashkenazy_5)
-
-chroma_preprocessing <- function(sonata) {
-  sonata <- sonata |>
-  select(segments) |>
-  unnest(segments) |>
-  select(start, duration, pitches)
-}
-
-chromagram <- function(sonata, chroma) {
-  if (chroma) {
-    plot <- ggplot(sonata,
-         aes(x = start + duration / 2,
-            width = duration,
-            y = pitch_class,
-            fill = value
-            )
-        )
-  } else {
-    plot <- ggplot(sonata,
-         aes(x = start + duration / 2,
-            width = duration,
-            y = basis,
-            fill = value
-            )
-        )
-  }
-  
-  plot +
-  geom_tile() +
-  labs(x = "Time (s)", y = NULL, fill = "Magnitude") +
-  theme_classic() +
-  scale_fill_viridis_c() +
-  scale_x_continuous(breaks=seq(0,2000,60))
-}
 
 chroma_comparison <- lapply(chroma_comparison, chroma_preprocessing)
 ```
@@ -349,140 +491,4 @@ DTW_plot
 
 ***
 Text.
-
-### Timbre analysis
-
-```{r  self_similarity, include=FALSE}
-lettberg_1_1 <- readRDS(file = "data/pieces/lettberg/lettberg_1_1.RDS")
-lettberg_2_1 <- readRDS(file = "data/pieces/lettberg/lettberg_2_1.RDS")
-lettberg_3_1 <- readRDS(file = "data/pieces/lettberg/lettberg_3_1.RDS")
-lettberg_4_1 <- readRDS(file = "data/pieces/lettberg/lettberg_4_1.RDS")
-lettberg_5_1 <- readRDS(file = "data/pieces/lettberg/lettberg_5_1.RDS")
-lettberg_6_1 <- readRDS(file = "data/pieces/lettberg/lettberg_6_1.RDS")
-lettberg_7_1 <- readRDS(file = "data/pieces/lettberg/lettberg_7_1.RDS")
-lettberg_8_1 <- readRDS(file = "data/pieces/lettberg/lettberg_8_1.RDS")
-lettberg_9_1 <- readRDS(file = "data/pieces/lettberg/lettberg_9_1.RDS")
-lettberg_10_1 <- readRDS(file = "data/pieces/lettberg/lettberg_10_1.RDS")
-```
-
-```{r functions_timbre, include=FALSE}
-chroma_and_timbre <- function(sonata) {
-  sonata <- sonata |>
-  compmus_align(bars, segments) |>                     # Change `bars`
-  select(bars) |>                                      #   in all three
-  unnest(bars) |>                                      #   of these lines.
-  mutate(
-    pitches =
-      map(segments,
-        compmus_summarise, pitches,
-        method = "rms", norm = "euclidean"              # Change summary & norm.
-      )
-  ) |>
-  mutate(
-    timbre =
-      map(segments,
-        compmus_summarise, timbre,
-        method = "rms", norm = "euclidean"             # Change summary & norm.
-      )
-  )
-}
-
-self_similarity <- function(sonata, chroma) {
-  if (chroma) {
-    plot <- sonata |>
-      compmus_self_similarity(pitches, "cosine") 
-  } else {
-    plot <- sonata |>
-      compmus_self_similarity(timbre, "cosine") 
-  }
-  
-  plot |> 
-    ggplot(
-      aes(
-        x = xstart + xduration / 2,
-        width = xduration,
-        y = ystart + yduration / 2,
-        height = yduration,
-        fill = d
-      )
-    ) +
-    geom_tile() +
-    coord_fixed() +
-    scale_fill_viridis_c(guide = "none") +
-    theme_classic() +
-    labs(x = "", y = "") +
-    scale_x_continuous(breaks=seq(0,2000,60)) +
-    scale_y_continuous(breaks=seq(0,2000,60))
-}
-```
-
-```{r}
-timbre_analysis <- list(lettberg_1_1,
-                        lettberg_8_1)
-
-timbre_analysis <- lapply(timbre_analysis, chroma_and_timbre)
-```
-
-```{r}
-sonata_1 <- timbre_analysis[[1]]
-sonata_8 <- timbre_analysis[[2]]
-
-
-cep_1 <- sonata_1 |>
-  compmus_gather_timbre() |>
-  chromagram(chroma = FALSE) +
-    geom_vline(xintercept = 151, colour = "red") +
-    geom_vline(xintercept = 299, colour = "red") +
-    labs(title = "Cepstrogram of the 1st sonata", subtitle = "Maria Lettberg")
-
-
-cep_8 <- sonata_8 |>
-  compmus_gather_timbre() |>
-  chromagram(chroma = FALSE) +
-  labs(title = "Cepstrogram of the 8th sonata", subtitle = "Maria Lettberg") +
-  geom_vline(xintercept = 140, colour = "red")
-
-
-plot_grid(plotlist = list(cep_1, cep_8), ncol = 1)
-```
-
-***
-Similarly to the chromagrams, spotify also allows us to analyse the timbre content of the pieces, referred to as Cepstrograms.
-However, solo piano works don't always lend themselves to this type of analysis, since you are generally limited in the kinds of timbres
-you can create with just a piano, unless you start employing extended techniques like in [george crumb's](https://youtu.be/pIEUS0-DDcs) case for instance. Regardless, there are instances where a pieces's eccentricities are reflected in its cepstrogram.
-
-Consider a sonata's structure for example. One defining aspect of the sonata is how its first movement is composed in sonata form. Although like most musical conventions, composers have been straying from this practice over time, including Scriabin. Despite that, his first sonata does display a strong semblance of sonata form. When looking at the cepstrogram, you can make out how the exposition section is repeated once in the sonata's beginning.
-
-Structural details like this are hard to find in his other sonatas, as they are written . It is quite tough to define an overarching structure in his 8th sonata for instance. Instead, this sonata 
-
-### Self similarity
-```{r}
-timbre_analysis <- list(lettberg_2_1,
-                        lettberg_7_1)
-
-timbre_analysis <- lapply(timbre_analysis, chroma_and_timbre)
-
-sonata_2 <- timbre_analysis[[1]]
-sonata_7 <- timbre_analysis[[2]]
-```
-
-```{r}
-selfsim_chroma_1 <- self_similarity(sonata_1, chroma=TRUE)
-selfsim_timbre_1 <- self_similarity(sonata_1, chroma=FALSE)
-
-plot_grid(plotlist = list(selfsim_chroma_1, selfsim_timbre_1))
-```
-
-***
-Text.
-
-### test
-
-```{r}
-selfsim_chroma_1 <- self_similarity(sonata_8, chroma=TRUE)
-selfsim_timbre_1 <- self_similarity(sonata_8, chroma=FALSE)
-
-plot_grid(plotlist = list(selfsim_chroma_1, selfsim_timbre_1))
-```
-
 
