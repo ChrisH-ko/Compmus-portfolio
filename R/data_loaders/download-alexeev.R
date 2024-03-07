@@ -1,6 +1,8 @@
 alexeev <- get_playlist_audio_features("", "06t6MgQ4xonM7npcnVNrRp") %>%
   mutate(sonata = as.numeric(gsub(".*?([0-9]+).*", "\\1", track.name))) %>%
-  mutate(pianist = "Dmitri Alexeev")
+  mutate(pianist = "Dmitri Alexeev") %>%
+  group_by(sonata) %>%
+  mutate(movement = row_number())
 
 saveRDS(object = alexeev, file = "data/playlists/alexeev-playlist.RDS")
 
