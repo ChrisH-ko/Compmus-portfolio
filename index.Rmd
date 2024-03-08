@@ -328,6 +328,8 @@ key_9_1
 
 There's a lot that can be said about Scriabin's harmonic language. One important aspect of his later works is how, to a fair extent, it's based on unique scales and chords such as the [octatonic scale](https://en.wikipedia.org/wiki/Octatonic_scale) or the ['mystic' chord](https://en.wikipedia.org/wiki/Mystic_chord). I've tried to create a mask of one of the organizations of the octatonic scale for each pitch class to see if it may yield interesting results for the 9th sonata.
 
+It is admittedly quite hard to say whether these results hold any weight. The plot does seem to consistently mark certain sections to use a certain octatonic scale. I've looked through the score and confirmed that some of these sections do indeed use the pitches of these octatonic scales. However, the same cannot be said for the other sonatas, some of which also do make use of this scale. There's also the fact that my mask only makes a distinction with the key's 'starting' pitch, the pitches within the octatonic scale and the rest of the pitches. The masks is very simple and likely does not properly convey to which degree each pitch supports an octatonic key.
+
 ### A piece's tempo can vary quite a bit accross pianists
 ```{r}
 all_recordings |>
