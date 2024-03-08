@@ -490,7 +490,7 @@ ashkenazy_5_chroma <- ashkenazy_5_pitches |>
 
 chromagram_ashk_4 <- chromagram(ashkenazy_4_chroma, TRUE) +
     labs(title = "Chromagram of the 4th sonata", subtitle = "Vladimir Ashkenazy") +
-    geom_vline(xintercept = head(ashkenazy_4_2_chroma, n=1)$start, colour = "red")
+    geom_vline(xintercept = head(ashkenazy_4_2_chroma, n=1)$start, colour = "#c2abab", size = 0.8)
 
 chromagram_ashk_5 <- chromagram(ashkenazy_5_chroma, TRUE) +
     labs(title = "Chromagram of the 5th sonata", subtitle = "Vladimir Ashkenazy")
@@ -742,8 +742,8 @@ sonata_8 <- timbre_analysis[[2]]
 cep_1 <- sonata_1 |>
   compmus_gather_timbre() |>
   chromagram(chroma = FALSE) +
-    geom_vline(xintercept = 151, colour = "red") +
-    geom_vline(xintercept = 299, colour = "red") +
+    geom_vline(xintercept = 151, colour = "#c2abab", size = 0.8) +
+    geom_vline(xintercept = 299, colour = "#c2abab", size = 0.8) +
     labs(title = "Cepstrogram of the 1st sonata", subtitle = "Maria Lettberg")
 
 
@@ -751,7 +751,7 @@ cep_8 <- sonata_8 |>
   compmus_gather_timbre() |>
   chromagram(chroma = FALSE) +
   labs(title = "Cepstrogram of the 8th sonata", subtitle = "Maria Lettberg") +
-  geom_vline(xintercept = 140, colour = "red")
+  geom_vline(xintercept = 140, colour = "#c2abab", size = 0.8)
 
 
 plot_grid(plotlist = list(cep_1, cep_8), ncol = 1)
