@@ -5,6 +5,7 @@ date: "2024-02-21"
 output: 
   flexdashboard::flex_dashboard:
     storyboard: true
+    self_contained: false
     css: stylesheets/style.css
 ---
 
@@ -207,8 +208,8 @@ prometheus_keys <-
 
 octatonic_keys <-
   tribble(~name, ~template,
-          paste("octatonic 1", c_o_5[1]), circshift(octatonic_scale, 6),
-          paste("octatonic 2", c_o_5[1]), circshift(octatonic_scale2, 6))
+          # paste("octatonic 1", c_o_5[1]), circshift(octatonic_scale, 6),
+          paste("octatonic", c_o_5[1]), circshift(octatonic_scale2, 6))
 
 p_n_o <- bind_rows(prometheus_keys, octatonic_keys)
 
@@ -232,9 +233,11 @@ for (i in 2:12) {
 
   key_02 <-
   tribble(~name, ~template,
-          paste("octatonic 2", c_o_5[i]), circshift(octatonic_scale2, j))
+          paste("octatonic", c_o_5[i]), circshift(octatonic_scale2, j))
   
-  octatonic_keys <- bind_rows(octatonic_keys, key_01, key_02)
+  octatonic_keys <- bind_rows(octatonic_keys,
+                              #key_01,
+                              key_02)
   
   p_n_o <- bind_rows(p_n_o, key_p, key_01, key_02)
 }
@@ -302,7 +305,7 @@ key_2_1
 ```
 
 ***
-<iframe src="https://open.spotify.com/embed/playlist/4xnBi0S21rFHhhK0iGHpiS?utm_source=generator" width="100%" height="380" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>
+<iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/0zKZR4PiuC60TpDRo9VWWZ?utm_source=generator&theme=0" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
 
 We can use a recording's pitch content to try and estimate its key and which chords appear in it. An example of this can be seen here for the first movement of the second sonata in G# minor. This piece can quite easily be described in sonata form, with the exposition starting in G# minor as expected, briefly going to D# minor before largely remaining in B major.
 
@@ -313,12 +316,14 @@ These key changes are reflected quite well in the keygram, although it certainly
 ### What about the later sonatas?
 ```{r}
 key_9_1 <- plot_key_chords(zhukov_9_1, "octatonic") +
-  labs(title = "Key estimation | sonata 9", subtitle = "Igor Zhukov")
+  labs(title = "Keygram | sonata 9", subtitle = "Igor Zhukov")
 key_9_1
 ```
 
 ***
+<iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/70LZoLXVyBcbaMKDaSNvAn?utm_source=generator&theme=0" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
 
+There's a lot that can be said about Scriabin's harmonic language. One important aspect of his later works is how, to a fair extent, it's based on unique scales and chords such as the [octatonic scale](https://en.wikipedia.org/wiki/Octatonic_scale) or the ['mystic' chord](https://en.wikipedia.org/wiki/Mystic_chord). I've tried to create a mask of one of the organizations of the octatonic scale for each pitch class to see if it may yield interesting results for the 9th sonata.
 
 ### A piece's tempo can vary quite a bit accross pianists
 ```{r}
