@@ -353,21 +353,25 @@ all_recordings |>
   ) +
   geom_point(aes(size = duration / 60)) +
   geom_rug() +
-  theme_minimal() +
+  theme(panel.background = element_rect(fill = "#ccdbc8",
+                                colour = "#ccdbc8")) +
+  #theme_minimal() +
   labs(
     x = "Mean Tempo (bpm)",
     y = "SD Tempo",
     colour = "Genre",
     size = "Duration (min)",
-    alpha = "Volume (dBFS)"
+    alpha = "Volume (dBFS)",
+    title = "Tempo analysis of the different performers"
   ) + 
   facet_wrap(~ pianist) +
   scale_color_manual(values = cols)
 ```
 
 ***
-text.
+When comparing different performances of the same pieces, many differences are bound to pop up. Such is the nature of interpretation, you could say. Two variables that are relatively easy to compare and measure are loudness and tempo. How accurate spotify's analysis actually is, remains difficult to determine, but it couldn't hurt to take a look, right?
 
+As expected, different pianist show quite a different spread when it comes to their tempo and tempo variance throughout their recordings. Maria Lettberg's recordings seem to all be quite consistent, while Vladimir Ashkenazy takes a lot more liberty when it comes to tempo. Interestingl
 
 ### The style of Scriabin 
 
