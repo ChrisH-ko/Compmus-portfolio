@@ -5,8 +5,6 @@ date: "2024-02-21"
 output: 
   flexdashboard::flex_dashboard:
     storyboard: true
-    #self_contained: false
-    source: https://github.com/ChrisH-ko/Compmus-portfolio/blob/main/index.Rmd
     css: stylesheets/style.css
 ---
 
@@ -306,7 +304,9 @@ key_2_1
 ```
 
 ***
-<iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/0zKZR4PiuC60TpDRo9VWWZ?utm_source=generator&theme=0" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+```{=html}
+<iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/0zKZR4PiuC60TpDRo9VWWZ?utm_source=generator&theme=0" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" data-external="1"></iframe>
+```
 
 We can use a recording's pitch content to try and estimate its key and which chords appear in it. An example of this can be seen here for the first movement of the second sonata in G# minor. This piece can quite easily be described in sonata form, with the exposition starting in G# minor as expected, briefly going to D# minor before largely remaining in B major.
 
@@ -322,7 +322,9 @@ key_9_1
 ```
 
 ***
-<iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/70LZoLXVyBcbaMKDaSNvAn?utm_source=generator&theme=0" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+```{=html}
+<iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/70LZoLXVyBcbaMKDaSNvAn?utm_source=generator&theme=0" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" data-external="1"></iframe>
+```
 
 There's a lot that can be said about Scriabin's harmonic language. One important aspect of his later works is how, to a fair extent, it's based on unique scales and chords such as the [octatonic scale](https://en.wikipedia.org/wiki/Octatonic_scale) or the ['mystic' chord](https://en.wikipedia.org/wiki/Mystic_chord). I've tried to create a mask of one of the organizations of the octatonic scale for each pitch class to see if it may yield interesting results for the 9th sonata.
 
