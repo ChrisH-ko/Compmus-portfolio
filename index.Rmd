@@ -6,6 +6,7 @@ output:
   flexdashboard::flex_dashboard:
     storyboard: true
     self_contained: false
+    source: https://github.com/ChrisH-ko/Compmus-portfolio/blob/main/index.Rmd
     css: stylesheets/style.css
 ---
 
