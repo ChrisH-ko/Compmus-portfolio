@@ -72,7 +72,7 @@ chromagram <- function(sonata, chroma) {
 cols <- c("Early" = "#c2df23", "Middle" = "#1fa187", "Late" = "#440154")
 ```
 
-### key estimation
+### Tonality is identifyable in early works...
 ```{r chord_masks, include=FALSE}
 circshift <- function(v, n) {
   if (n == 0) v else c(tail(v, n), head(v, -n))
@@ -279,7 +279,7 @@ key_2_1
 ***
 Text.
 
-### key estimation
+### What about the later sonatas?
 ```{r}
 key_9_1 <- plot_key_chords(zhukov_9_1, "octatonic") +
   labs(title = "Key estimation | sonata 9", subtitle = "Igor Zhukov")
@@ -289,7 +289,7 @@ key_9_1
 ***
 Text.
 
-### Track-level summaries
+### A piece's tempo can vary quite a bit accross pianists
 ```{r}
 all_recordings |>
   mutate(
