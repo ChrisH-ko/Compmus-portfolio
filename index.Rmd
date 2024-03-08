@@ -70,7 +70,30 @@ chromagram <- function(sonata, chroma) {
 
 ```{r}
 cols <- c("Early" = "#c2df23", "Middle" = "#1fa187", "Late" = "#440154")
+pitch_classes <- c("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
 ```
+
+### Spotify is not very certain about the late sonata's keys
+```{r, cache=TRUE}
+all_recordings %>%
+  mutate(key_name = factor(key_name, levels = pitch_classes)) %>%
+  filter(sonata >= 5, 
+         movement == 1) %>%
+  ggplot(aes(alpha = key_confidence, x = key_name, fill = pianist)) +
+  geom_bar() +
+  scale_fill_viridis_d() +
+  scale_alpha(range=c(0.15, 1)) +
+  facet_wrap(~ sonata, nrow = 2) + 
+  labs(title = "Spotify key analysis", y = "", fill = "pianist", alpha = "confidence") +
+  scale_x_discrete("Key", drop=FALSE)
+```
+
+***
+Taking a look at the later half of Scriabin's sonatas, it quickly becomes clear that spotify has a harder time finding a key to stick with. Perhaps not unexpectedly so, since these pieces do not adhere to traditional tonality, as mentioned. While there might not be much of a point to trying to identify a key in these pieces, not to mention how spotify's analysis is probably not the best fit for unconventional music in general, it's still interesting to see how it even fails to agree on a pitch across different recordings.
+
+Perhaps different pianists might naturally bring forward different pitches throughout these kinds of pieces, consciously or not. Or perhaps this is a result of the recording process, where different equipment, studios and 'finishing touches' might alter the pitch content of a recording.
+
+On top of that, the key confidence feature also shows that spotify itself is aware of its uncertainty to some degree.
 
 ### Tonality is identifyable in early works...
 ```{r chord_masks, include=FALSE}
@@ -272,12 +295,20 @@ zhukov_9_1 <- zhukov %>%
 
 ```{r}
 key_2_1 <- plot_key_chords(zhukov_2_1, "normal_key") +
-  labs(title = "Key estimation | sonata 2, mvt. 1", subtitle = "Igor Zhukov")
+  labs(title = "Keygram | sonata 2, mvt. 1", subtitle = "Igor Zhukov") +
+  geom_vline(xintercept = 235, colour = "#c2abab", size = 0.8) +
+  geom_vline(xintercept = 320, colour = "#c2abab", size = 0.8)
 key_2_1
 ```
 
 ***
-Text.
+<iframe src="https://open.spotify.com/embed/playlist/4xnBi0S21rFHhhK0iGHpiS?utm_source=generator" width="100%" height="380" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>
+
+We can use a recording's pitch content to try and estimate its key and which chords appear in it. An example of this can be seen here for the first movement of the second sonata in G# minor. This piece can quite easily be described in sonata form, with the exposition starting in G# minor as expected, briefly going to D# minor before largely remaining in B major.
+
+The development section continues in B major, before quickly and briefly shifting to D major, G minor, C minor, F minor and eventually leads back to G# minor. The recapitulation continues on in G# minor, before quickly modulating to the relative E major and remaining there until the end of the movement.
+
+These key changes are reflected quite well in the keygram, although it certainly helps to know them beforehand.
 
 ### What about the later sonatas?
 ```{r}
@@ -287,7 +318,7 @@ key_9_1
 ```
 
 ***
-Text.
+
 
 ### A piece's tempo can vary quite a bit accross pianists
 ```{r}
@@ -327,22 +358,6 @@ all_recordings |>
 ***
 text.
 
-### Spotify is not very certain about the late sonata's keys
-```{r, cache=TRUE}
-all_recordings %>%
-  mutate(first_half = sonata < 5) %>%
-  filter(
-         movement == 1) %>%
-  ggplot(aes(alpha = key_confidence, x = key_name, fill = pianist)) +
-  geom_bar() +
-  #scale_fill_viridis_d() +
-  scale_alpha(range=c(0.2, 1)) +
-  facet_wrap(~ sonata) + 
-  labs(title = "Spotify key analysis", y = "", fill = "pianist", x = "key", alpha = "confidence")
-```
-
-***
-text.
 
 ### The style of Scriabin 
 
