@@ -323,6 +323,7 @@ all_recordings |>
   facet_wrap(~ pianist) +
   scale_color_manual(values = cols)
 ```
+
 ***
 text.
 
