@@ -327,25 +327,18 @@ all_recordings |>
 ***
 text.
 
-### timbre
+### Spotify is not very certain about the late sonata's keys
 ```{r, cache=TRUE}
 all_recordings %>%
-  mutate(first_half = sonata < 5)|>
-  mutate(
-    timbre =
-      map(
-        segments,
-        compmus_summarise,
-        timbre,
-        method = "mean"
-      )
-  ) |>
-  select(first_half, timbre) |>
-  compmus_gather_timbre() |>
-  ggplot(aes(x = basis, y = value, fill = first_half)) +
-  geom_violin() +
-  scale_fill_viridis_d() +
-  labs(x = "Spotify Timbre Coefficients", y = "", fill = "Genre")
+  mutate(first_half = sonata < 5) %>%
+  filter(
+         movement == 1) %>%
+  ggplot(aes(alpha = key_confidence, x = key_name, fill = pianist)) +
+  geom_bar() +
+  #scale_fill_viridis_d() +
+  scale_alpha(range=c(0.2, 1)) +
+  facet_wrap(~ sonata) + 
+  labs(title = "Spotify key analysis", y = "", fill = "pianist", x = "key", alpha = "confidence")
 ```
 
 ***
