@@ -5,12 +5,12 @@ date: "2024-02-21"
 output: 
   flexdashboard::flex_dashboard:
     storyboard: true
-    self_contained: false
+    #self_contained: false
     source: https://github.com/ChrisH-ko/Compmus-portfolio/blob/main/index.Rmd
     css: stylesheets/style.css
 ---
 
-```{r setup}
+```{r setup, include=FALSE}
 remotes::install_github('jaburgoyne/compmus')
 
 library(tidyverse)
