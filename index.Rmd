@@ -69,12 +69,16 @@ chromagram <- function(sonata, chroma) {
 ```
 
 ```{r}
+sonata_names <- c("Sonata 5", "Sonata 6", "Sonata 7", "Sonata 8", "Sonata 9", "Sonata 10")
+
 cols <- c("Early" = "#c2df23", "Middle" = "#1fa187", "Late" = "#440154")
 pitch_classes <- c("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
+facet_colour <- theme(strip.background = element_rect(fill = "#47b59f"),
+                      strip.text = element_text(colour = "#ffffff"))
 ```
 
 ### Spotify is not very certain about the late sonata's keys
-```{r, cache=TRUE}
+```{r}
 all_recordings %>%
   mutate(key_name = factor(key_name, levels = pitch_classes)) %>%
   filter(sonata >= 5, 
@@ -83,9 +87,10 @@ all_recordings %>%
   geom_bar() +
   scale_fill_viridis_d() +
   scale_alpha(range=c(0.15, 1)) +
-  facet_wrap(~ sonata, nrow = 2) + 
+  facet_wrap(~ factor(sonata, labels = sonata_names), nrow = 2) + 
   labs(title = "Spotify key analysis", y = "", fill = "pianist", alpha = "confidence") +
-  scale_x_discrete("Key", drop=FALSE)
+  scale_x_discrete("Key", drop=FALSE) +
+  facet_colour
 ```
 
 ***
@@ -353,9 +358,9 @@ all_recordings |>
   ) +
   geom_point(aes(size = duration / 60)) +
   geom_rug() +
-  theme(panel.background = element_rect(fill = "#ccdbc8",
-                                colour = "#ccdbc8")) +
-  #theme_minimal() +
+  #theme(panel.background = element_rect(fill = "#f5fff2",
+  #                              colour = "#f5fff2")) +
+  theme_minimal() +
   labs(
     x = "Mean Tempo (bpm)",
     y = "SD Tempo",
@@ -365,13 +370,14 @@ all_recordings |>
     title = "Tempo analysis of the different performers"
   ) + 
   facet_wrap(~ pianist) +
-  scale_color_manual(values = cols)
+  scale_color_manual(values = cols) +
+  facet_colour
 ```
 
 ***
 When comparing different performances of the same pieces, many differences are bound to pop up. Such is the nature of interpretation, you could say. Two variables that are relatively easy to compare and measure are loudness and tempo. How accurate spotify's analysis actually is, remains difficult to determine, but it couldn't hurt to take a look, right?
 
-As expected, different pianist show quite a different spread when it comes to their tempo and tempo variance throughout their recordings. Maria Lettberg's recordings seem to all be quite consistent, while Vladimir Ashkenazy takes a lot more liberty when it comes to tempo. Interestingl
+As expected, different pianist show quite a different spread when it comes to their tempo and tempo variance throughout their recordings. Maria Lettberg's recordings seem to all be quite consistent, while Vladimir Ashkenazy takes a lot more liberty when it comes to tempo. Besides that, Igor Zhukov's recordings all seem to be consistently louder. This might also just be a result of the different recording processes.
 
 ### The style of Scriabin 
 
@@ -431,7 +437,8 @@ energy_valence_plot <- ggplot(all_recordings_mean_energy_valence, aes(x = mean_e
   scale_x_log10() +
   scale_color_manual(values = cols) +
   labs(x="Energy", y="Valence", color="Period", title="Energy and Valence for Scriabin's 10 sonatas",
-       subtitle="The late sonatas have a distinctly low valence level.")
+       subtitle="The late sonatas have a distinctly low valence level.") +
+  facet_colour
 
 ggplotly(energy_valence_plot)
 ```
