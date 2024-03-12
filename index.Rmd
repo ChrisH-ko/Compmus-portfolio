@@ -1,5 +1,5 @@
 ---
-title: "My Portfolio"
+title: "The Scriabin sonatas"
 author: "Chris"
 date: "2024-02-21"
 output: 
@@ -577,16 +577,16 @@ plot_grid(plotlist = chroma_ashkenazy, ncol = 1)
 ### Aligning different performances
 
 ```{r DTW, cache=TRUE}
+lettberg_7 <- lettberg %>% filter(sonata == 7, movement == 1)
 ashkenazy_7 <- ashkenazy %>% filter(sonata == 7, movement == 1)
-alexeev_7 <- alexeev %>% filter(sonata == 7, movement == 1)
 
-DTW_recordings <- lapply(list(ashkenazy_7, alexeev_7), chroma_preprocessing)
+DTW_recordings <- lapply(list(lettberg_7, ashkenazy_7), chroma_preprocessing)
 
 DTW_plot <- compmus_long_distance(
-  DTW_recordings[[1]] |> mutate(pitches = map(pitches, compmus_normalise, "chebyshev")),
-  DTW_recordings[[2]] |> mutate(pitches = map(pitches, compmus_normalise, "chebyshev")),
+  DTW_recordings[[1]] |> mutate(pitches = map(pitches, compmus_normalise, "manhattan")),
+  DTW_recordings[[2]] |> mutate(pitches = map(pitches, compmus_normalise, "manhattan")),
   feature = pitches,
-  method = "euclidean"
+  method = "aitchison"
 ) |>
   ggplot(
     aes(
@@ -599,33 +599,31 @@ DTW_plot <- compmus_long_distance(
   ) +
   geom_tile() +
   coord_equal() +
-  labs(x = "Vladimir Ashkenazy", y = "Dmitri Alexeev", title = "Sonata 7") +
+  labs(x = "Maria Lettberg", y = "Vladimir Ashkenazy", title = "Sonata 7") +
   theme_minimal() +
   scale_fill_viridis_c(guide = NULL) +
   minute_scalex +
   minute_scaley +
   theme(axis.text.x = element_text(angle=-45))
+```
 
+```{r dtw_plot, cache=TRUE}
 DTW_plot
+  #geom_segment(aes(x = 0, y = 0, xend = 749, yend = 646), colour = "#c2abab", size = 0.4, alpha = 0.2)
 ```
 
 ***
--- ADD TEXT --
+```{=html}
+<iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/7EYRKteYYguJuCMvH1MA2e?utm_source=generator&theme=0" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" data-external="1"></iframe>
+```
 
+Chromagrams can also be used to align different performances of the same music. To put it shortly, this is done by matching similar segments of the chromagrams.
 
 ### It is difficult to gather much information out of timbre
 
 ```{r self_similarity_recordings, include=FALSE}
-lettberg_1_1 <- readRDS(file = "data/pieces/lettberg/lettberg_1_1.RDS")
-lettberg_2_1 <- readRDS(file = "data/pieces/lettberg/lettberg_2_1.RDS")
-lettberg_3_1 <- readRDS(file = "data/pieces/lettberg/lettberg_3_1.RDS")
-lettberg_4_1 <- readRDS(file = "data/pieces/lettberg/lettberg_4_1.RDS")
-lettberg_5_1 <- readRDS(file = "data/pieces/lettberg/lettberg_5_1.RDS")
-lettberg_6_1 <- readRDS(file = "data/pieces/lettberg/lettberg_6_1.RDS")
-lettberg_7_1 <- readRDS(file = "data/pieces/lettberg/lettberg_7_1.RDS")
-lettberg_8_1 <- readRDS(file = "data/pieces/lettberg/lettberg_8_1.RDS")
-lettberg_9_1 <- readRDS(file = "data/pieces/lettberg/lettberg_9_1.RDS")
-lettberg_10_1 <- readRDS(file = "data/pieces/lettberg/lettberg_10_1.RDS")
+lettberg_1_1 <- lettberg %>% filter(sonata == 1, movement == 1)
+lettberg_8_1 <- lettberg %>% filter(sonata == 8, movement == 1)
 ```
 
 ```{r functions_timbre_selfsim, include=FALSE}
@@ -678,16 +676,78 @@ self_similarity <- function(sonata, chroma) {
     scale_y_continuous(breaks=seq(0,2000,60)) +
     theme(axis.text.x = element_text(angle=-45))
 }
+
+compmus_test <- function(dat, feature, method = "euclidean") {
+  feature <- enquo(feature)
+  compmus_test2(dat, dat, !!feature, method)
+}
+
+compmus_test2 <- function(xdat, ydat, feature, method = "euclidean") {
+  feature <- enquo(feature)
+
+  ## Supported functions
+
+  manhattan <- function(x, y) sum(abs(x - y))
+  euclidean <- function(x, y) sqrt(sum((x - y)^2))
+  chebyshev <- function(x, y) max(abs(x - y))
+  pearson <- function(x, y) 1 - cor(x, y)
+  cosine <- function(x, y) {
+    1 - sum(compmus_normalise(x, "euc") * compmus_normalise(y, "euc"))
+  }
+  angular <- function(x, y) 2 * acos(1 - cosine(x, y)) / pi
+  aitchison <- function(x, y) {
+    euclidean(compmus_normalise(x, "clr"), compmus_normalise(y, "clr"))
+  }
+
+  ## Method aliases
+
+  METHODS <-
+    list(
+      manhattan = manhattan,
+      cityblock = manhattan,
+      taxicab = manhattan,
+      L1 = manhattan,
+      totvar = manhattan,
+      euclidean = euclidean,
+      L2 = euclidean,
+      chebyshev = chebyshev,
+      maximum = chebyshev,
+      pearson = pearson,
+      correlation = pearson,
+      cosine = cosine,
+      angular = angular,
+      aitchison = aitchison
+    )
+
+  ## Function selection
+
+  if (!is.na(i <- pmatch(method, names(METHODS)))) {
+    dplyr::full_join(
+      xdat %>%
+        dplyr::select(xstart = start, xduration = duration, x = !!feature),
+      ydat %>%
+        dplyr::select(ystart = start, yduration = duration, y = !!feature),
+      by = character()
+    ) %>%
+      dplyr::transmute(
+        xstart, xduration,
+        ystart, yduration,
+        timb = purrr::map2_dbl(x, y, METHODS[[i]])
+      )
+  } else {
+    stop("The method name is ambiguous or the method is unsupported.")
+  }
+}
 ```
 
-```{r}
+```{r sonata_1_8_preproces}
 timbre_analysis <- list(lettberg_1_1,
                         lettberg_8_1)
 
 timbre_analysis <- lapply(timbre_analysis, chroma_and_timbre)
 ```
 
-```{r}
+```{r cepstogram_1_8}
 sonata_1 <- timbre_analysis[[1]]
 sonata_8 <- timbre_analysis[[2]]
 
@@ -697,7 +757,7 @@ cep_1 <- sonata_1 |>
   chromagram(chroma = FALSE) +
     geom_vline(xintercept = 151, colour = "#c2abab", size = 0.8) +
     geom_vline(xintercept = 299, colour = "#c2abab", size = 0.8) +
-    labs(title = "Cepstrogram of the 1st sonata", subtitle = "Maria Lettberg")
+    labs(title = "Cepstrogram of the 1st sonata, mvt. 1", subtitle = "Maria Lettberg")
 
 
 cep_8 <- sonata_8 |>
@@ -721,42 +781,43 @@ Structural details like this are hard to find in his other sonatas, especially w
 
 ### The structure of Scriabin's sonatas is not always easy to define
 
-```{r}
-timbre_analysis <- list(lettberg_2_1,
-                        lettberg_7_1)
-
-timbre_analysis <- lapply(timbre_analysis, chroma_and_timbre)
-
-sonata_2 <- timbre_analysis[[1]]
-sonata_7 <- timbre_analysis[[2]]
-```
-
-```{r}
+```{r self_sim_1}
 selfsim_chroma_1 <- self_similarity(sonata_1, chroma=TRUE) +
-  labs(title = "Pitch | Sonata No. 1", subtitle = "Maria Lettberg")
+  labs(title = "Pitch | Sonata No. 1, mvt. 1", subtitle = "Maria Lettberg")
 selfsim_timbre_1 <- self_similarity(sonata_1, chroma=FALSE) +
-  labs(title = "Timbre | Sonata No. 1", subtitle = "Maria Lettberg")
+  labs(title = "Timbre | Sonata No. 1, mvt. 1", subtitle = "Maria Lettberg")
 
 plot_grid(plotlist = list(selfsim_chroma_1, selfsim_timbre_1)) + labs(title = "Self similarity matrices")
 ```
 
 ***
+```{=html}
+<iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/0GAbhHPecfDF8LBYTwNmQO?utm_source=generator&theme=0" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" data-external="1"></iframe>
+```
+
 These plots display the pitch and timbre-based self-similarity within Scriabin's first sonata. While the Timbre matrix does not seem to divulge much, since the overall timbre of the piece does not vary much, you can still make out how there's one bar after around 150 seconds where there's a large pause. Other than that, the plot does not tell us much.
 
 The pitch-based self-similarity matrix on the other hand does clearly display the repetition of the sonata's exposition. As seen in how there's a dark blue line parallel to the diagonal of the matrix, indicating that two different sections of the piece overlap. The development and recapitulation are a bit harder to make out. However if you look closely, you can just barely see a very short dark blue diagonal line starting at 420 seconds on the x axis. This line is very short since the recapitulation almost immediately modulates to a different key.
 
 ### Self-similarity matrices help very little with the later sonatas
 
-```{r}
-selfsim_chroma_7 <- self_similarity(sonata_7, chroma=TRUE) +
-  labs(title = "Pitch | Sonata No. 7", subtitle = "Maria Lettberg")
-selfsim_timbre_7 <- self_similarity(sonata_7, chroma=FALSE) +
-  labs(title = "Timbre | Sonata No. 7", subtitle = "Maria Lettberg")
+```{r self_sim_8}
+selfsim_chroma_8 <- self_similarity(sonata_8, chroma=TRUE) +
+  labs(title = "Pitch | Sonata No. 8", subtitle = "Maria Lettberg")
 
-plot_grid(plotlist = list(selfsim_chroma_7, selfsim_timbre_7))
+selfsim_timbre_8 <- self_similarity(sonata_8, chroma=FALSE) +
+  labs(title = "Timbre | Sonata No. 8", subtitle = "Maria Lettberg")
+
+plot_grid(plotlist = list(selfsim_chroma_8, selfsim_timbre_8))
 ```
 
 ***
+```{=html}
+<iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/7GfFMPRWzHVQ2siD16SIgZ?utm_source=generator&theme=0" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" data-external="1"></iframe>
+```
+
 As Scriabin started breaking away from conventional late-romanticism, he also began applying structure to his pieces in a different way. Rather than repetition, Scriabin utilizes many different motifs that he transforms, combines, transposes and puts into different contexts. What then defines the different sections of these pieces is how these motifs are applied. Two sections might be related through a motif appearing in a similar context, despite being modulated, in a different register or altered. This makes it very difficult to find any meaning these self-similarity matrices, as the sonatas' structures are not defined by either pitch nor timbre. Not to mention how there's is little to go off of on timbre. Let alone how these pieces' actual structures are up to debate.
 
-When specifically looking at the matrices of the seventh sonata, we can once more see instances of prolonged silence in the timbre matrix. This piece does follow some semblance of sonata form, however as expected it does not really show in either matrix. You can vaguely make out how the piece goes from one section to another at around 390 seconds in. The pitch matrix show that the material before and after that point are quite dissimilar. This matches up where one could consider the recapitulation of the sonata to be, since it sounds like a retelling of the beginning of the piece.
+When specifically looking at the matrices of the eight sonata, we can once more see instances of prolonged silence in the timbre matrix. We can also once again clearly see the distinction of the <i>introduction</i> compared to the rest of the piece. Truthfully, once you start to thoroughly analyse this piece, you'll find that it does follow some semblance of sonata form [as seen here](http://www.scriabin-association.com/skryabins-eighth-sonata-composers-last-word-sonata-form-simon-nicholls/).
+
+However it does not really show in either matrix, as expected. You can vaguely make out how the piece cycles through different harmonic material in the pitch matrix, although this is by no means a strong indication of its structure. For instance, what one could consider the <i>exposition</i> and <i>recapitulation</i> of this sonata, begin at 150 seconds and 550 seconds respectively, but this is not reflected in either plot. While these sections may be musically similar, they are harmonically quite different and the timbre matrix is generally only helpful in identifying silent parts in the recording. One small moment of silence can actually be seen preceding the aforementioned recapitulation at 550 seconds.
