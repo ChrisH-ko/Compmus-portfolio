@@ -64,21 +64,25 @@ chromagram <- function(sonata, chroma) {
   labs(x = "Time (s)", y = NULL, fill = "Magnitude") +
   theme_classic() +
   scale_fill_viridis_c() +
-  scale_x_continuous(breaks=seq(0,2000,60))
+  scale_x_continuous(breaks=seq(0,2000,60)) +
+  theme(axis.text.x = element_text(angle=-45))
 }
 ```
 
-```{r}
+```{r useful_constants}
 sonata_names <- c("Sonata 5", "Sonata 6", "Sonata 7", "Sonata 8", "Sonata 9", "Sonata 10")
 
 cols <- c("Early" = "#c2df23", "Middle" = "#1fa187", "Late" = "#440154")
 pitch_classes <- c("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
 facet_colour <- theme(strip.background = element_rect(fill = "#47b59f"),
                       strip.text = element_text(colour = "#ffffff"))
+
+minute_scalex <- scale_x_continuous(breaks=seq(0,2000,60))
+minute_scaley <- scale_y_continuous(breaks=seq(0,2000,60))
 ```
 
 ### Spotify is not very certain about the late sonata's keys
-```{r}
+```{r keys_sonatas}
 all_recordings %>%
   mutate(key_name = factor(key_name, levels = pitch_classes)) %>%
   filter(sonata >= 5, 
@@ -87,18 +91,18 @@ all_recordings %>%
   geom_bar() +
   scale_fill_viridis_d() +
   scale_alpha(range=c(0.15, 1)) +
-  facet_wrap(~ factor(sonata, labels = sonata_names), nrow = 2) + 
+  facet_wrap(~ factor(sonata, labels = sonata_names), nrow = 3) + 
   labs(title = "Spotify key analysis", y = "", fill = "pianist", alpha = "confidence") +
   scale_x_discrete("Key", drop=FALSE) +
   facet_colour
 ```
 
 ***
-Taking a look at the later half of Scriabin's sonatas, it quickly becomes clear that spotify has a harder time finding a key to stick with. Perhaps not unexpectedly so, since these pieces do not adhere to traditional tonality, as mentioned. While there might not be much of a point to trying to identify a key in these pieces, not to mention how spotify's analysis is probably not the best fit for unconventional music in general, it's still interesting to see how it even fails to agree on a pitch across different recordings.
+Taking a look at the later half of Scriabin's sonatas, it quickly becomes clear that Spotify has a harder time finding a key to stick with. Perhaps not unexpectedly so, since these pieces do not adhere to traditional tonality, as mentioned. While there might not be much of a point to trying to identify a key in these pieces, not to mention how Spotify's analysis is probably not the best fit for unconventional music in general, it's still interesting to see how it even fails to agree on a pitch across different recordings.
 
 Perhaps different pianists might naturally bring forward different pitches throughout these kinds of pieces, consciously or not. Or perhaps this is a result of the recording process, where different equipment, studios and 'finishing touches' might alter the pitch content of a recording.
 
-On top of that, the key confidence feature also shows that spotify itself is aware of its uncertainty to some degree.
+On top of that, the key confidence feature also shows that Spotify itself is aware of its uncertainty to some degree. I've mapped Spotify's key_confidence feature to the opacity value of each recording. Some of the recordings are noticeably more opaque than the rest, but it's difficult to tell what might have caused that other than the fact that these pieces are simply tonally ambiguous.
 
 ### Tonality is identifyable in early works...
 ```{r chord_masks, include=FALSE}
@@ -247,7 +251,7 @@ for (i in 2:12) {
 }
 ```
 
-```{r functions}
+```{r key_chord_functions}
 chord_pitches <- function(sonata) {
   sonata <- sonata |>
   compmus_align(bars, segments) |>
@@ -283,13 +287,13 @@ plot_key_chords <- function(sonata, template) {
                        direction = -1,
                        trans = 'log'
     ) +
-  theme_minimal() +
+  theme_classic() +
   labs(x = "Time (s)", y = "") +
   scale_x_continuous(breaks=seq(0,2000,60))
 }
 ```
 
-```{r}
+```{r load_key_est_sonatas}
 zhukov_2_1 <- zhukov %>%
   filter(sonata == 2,
          movement == 1) %>%
@@ -300,7 +304,7 @@ zhukov_9_1 <- zhukov %>%
   chord_pitches()
 ```
 
-```{r}
+```{r plot_key_est_s2}
 key_2_1 <- plot_key_chords(zhukov_2_1, "normal_key") +
   labs(title = "Keygram | sonata 2, mvt. 1", subtitle = "Igor Zhukov") +
   geom_vline(xintercept = 235, colour = "#c2abab", size = 0.8) +
@@ -320,7 +324,7 @@ The development section continues in B major, before quickly and briefly shiftin
 These key changes are reflected quite well in the keygram, although it certainly helps to know them beforehand.
 
 ### What about the later sonatas?
-```{r}
+```{r plot_key_est_s9}
 key_9_1 <- plot_key_chords(zhukov_9_1, "octatonic") +
   labs(title = "Keygram | sonata 9", subtitle = "Igor Zhukov")
 key_9_1
@@ -336,8 +340,8 @@ There's a lot that can be said about Scriabin's harmonic language. One important
 It is admittedly quite hard to say whether these results hold any weight. The plot does seem to consistently mark certain sections to use a certain octatonic scale. I've looked through the score and confirmed that some of these sections do indeed use the pitches of these octatonic scales. However, the same cannot be said for the other sonatas, some of which also do make use of this scale. There's also the fact that my mask only makes a distinction with the key's 'starting' pitch, the pitches within the octatonic scale and the rest of the pitches. The masks is very simple and likely does not properly convey to which degree each pitch supports an octatonic key.
 
 ### A piece's tempo can vary quite a bit accross pianists
-```{r}
-all_recordings |>
+```{r tempo_plot}
+tempo_features <- all_recordings |>
   mutate(
     sections =
       map(
@@ -347,7 +351,9 @@ all_recordings |>
         list(section_mean = mean, section_sd = sd)   # aggregation functions
       )
   ) |>
-  unnest(sections) |>
+  unnest(sections)
+
+tempo_features |>
   ggplot(
     aes(
       x = tempo,
@@ -375,7 +381,7 @@ all_recordings |>
 ```
 
 ***
-When comparing different performances of the same pieces, many differences are bound to pop up. Such is the nature of interpretation, you could say. Two variables that are relatively easy to compare and measure are loudness and tempo. How accurate spotify's analysis actually is, remains difficult to determine, but it couldn't hurt to take a look, right?
+When comparing different performances of the same pieces, many differences are bound to pop up. Such is the nature of interpretation, you could say. Two variables that are relatively easy to compare and measure are loudness and tempo. How accurate Spotify's analysis actually is, remains difficult to determine, but it couldn't hurt to take a look, right?
 
 As expected, different pianist show quite a different spread when it comes to their tempo and tempo variance throughout their recordings. Maria Lettberg's recordings seem to all be quite consistent, while Vladimir Ashkenazy takes a lot more liberty when it comes to tempo. Besides that, Igor Zhukov's recordings all seem to be consistently louder. This might also just be a result of the different recording processes.
 
@@ -408,7 +414,7 @@ zhukov_plot <- ggplot(zhukov_mean_energy_valence, aes(x = mean_energy, y = mean_
   scale_x_log10() +
   # scale_color_grey(start = 0.75, end = 0) +
   labs(x="Energy", y="Valence", color="Period", title="Energy and Valence for Scriabin's 10 sonatas",
-       subtitle="Igor Zhukov | The late sonatas have a distinctly low valence level.") +
+       subtitle="Igor Zhukov") +
   annotate(
     "text",
     x = 0.1, y = 0.04,
@@ -417,7 +423,8 @@ zhukov_plot <- ggplot(zhukov_mean_energy_valence, aes(x = mean_energy, y = mean_
   ) +
   scale_color_manual(values = cols)
 
-ggplotly(zhukov_plot)
+ggplotly(zhukov_plot) %>%
+  layout(title = list(text = paste0("Energy and Valence for Scriabin's 10 sonatas <br> <sup>Igor Zhukov</sup>")))
 ```
 
 ***
@@ -451,190 +458,133 @@ At the same time however, the pieces show somewhat of a variance in energy level
 
 ### How clearly does a chromagram show a sonata's key?
 
-```{r get_sonatas_chromagram, include=FALSE}
-ashkenazy_4_1 <- readRDS(file = "data/pieces/ashkenazy/ashkenazy_4_1.RDS")
-ashkenazy_4_2 <- readRDS(file = "data/pieces/ashkenazy/ashkenazy_4_2.RDS")
-ashkenazy_5 <- readRDS(file = "data/pieces/ashkenazy/ashkenazy_5_1.RDS")
+```{r early_sonatas_chromagram, include=FALSE}
+ashkenazy_1_1 <- ashkenazy %>% filter(sonata == 3, movement == 1)
+ashkenazy_1_2 <- ashkenazy %>% filter(sonata == 3, movement == 2)
+ashkenazy_1_3 <- ashkenazy %>% filter(sonata == 3, movement == 3)
+ashkenazy_1_4 <- ashkenazy %>% filter(sonata == 3, movement == 4)
 
-chroma_comparison <- list(ashkenazy_4_1,
-                          ashkenazy_4_2,
-                          ashkenazy_5)
+ashkenazy_4_1 <- ashkenazy %>% filter(sonata == 4, movement == 1)
+ashkenazy_4_2 <- ashkenazy %>% filter(sonata == 4, movement == 2)
 
-chroma_comparison <- lapply(chroma_comparison, chroma_preprocessing)
-```
+early_chroma_comparison <- list(ashkenazy_1_1,
+                          ashkenazy_1_2,
+                          ashkenazy_1_3,
+                          ashkenazy_1_4,
+                          ashkenazy_4_1,
+                          ashkenazy_4_2)
 
-```{r process_4_5, include=FALSE}
-ashkenazy_4_1_chroma <- chroma_comparison[[1]] %>%
-  mutate(movement = 1)
+early_chroma_comparison <- lapply(early_chroma_comparison, chroma_preprocessing)
 
-ashkenazy_4_2_chroma <- chroma_comparison[[2]] %>%
-  mutate(movement = 2,
-         start = start + tail(ashkenazy_4_1_chroma, n=1)$start)
+ashkenazy_1_1_chroma <- early_chroma_comparison[[1]] %>% mutate(movement = 1)
+ashkenazy_1_2_chroma <- early_chroma_comparison[[2]] %>% mutate(movement = 2,
+                                                         start = start + tail(ashkenazy_1_1_chroma, n=1)$start)
+ashkenazy_1_3_chroma <- early_chroma_comparison[[3]] %>% mutate(movement = 3,
+                                                          start = start + tail(ashkenazy_1_2_chroma, n=1)$start)
+ashkenazy_1_4_chroma <- early_chroma_comparison[[4]] %>% mutate(movement = 4,
+                                                          start = start + tail(ashkenazy_1_3_chroma, n=1)$start)
 
-ashkenazy_4_pitches <- bind_rows(list(ashkenazy_4_1_chroma, ashkenazy_4_2_chroma)) %>%
+
+ashkenazy_4_1_chroma <- early_chroma_comparison[[3]] %>% mutate(movement = 1)
+ashkenazy_4_2_chroma <- early_chroma_comparison[[4]] %>% mutate(movement = 2,
+                                                          start = start + tail(ashkenazy_4_1_chroma, n=1)$start)
+
+ashkenazy_2_pitches <- bind_rows(list(ashkenazy_1_1_chroma,
+                                      ashkenazy_1_2_chroma,
+                                      ashkenazy_1_3_chroma,
+                                      ashkenazy_1_4_chroma
+                                      )) %>%
+    mutate(sonata = "Sonata 1")
+  
+ashkenazy_4_pitches <- bind_rows(list(ashkenazy_4_1_chroma,
+                                      ashkenazy_4_2_chroma)) %>%
     mutate(sonata = "Sonata 4")
-
-ashkenazy_5_pitches <- chroma_comparison[[3]] %>%
-  mutate(sonata = "Sonata 5")
 ```
 
-```{r Chromagram_4_5}
-ashkenazy_4_chroma <- ashkenazy_4_pitches |>
+```{r Chromagram_3_4}
+ashkenazy_2_chromagram <- ashkenazy_2_pitches |>
   mutate(pitches = map(pitches, compmus_normalise, "euclidean")) |>
   compmus_gather_chroma()
 
-ashkenazy_5_chroma <- ashkenazy_5_pitches |>
+ashkenazy_4_chromagram <- ashkenazy_4_pitches |>
   mutate(pitches = map(pitches, compmus_normalise, "euclidean")) |>
   compmus_gather_chroma()
 
+ashk_2_chromaplot <- chromagram(ashkenazy_2_chromagram, TRUE) +
+    labs(title = "Chromagram of the 3rd sonata", subtitle = "Vladimir Ashkenazy") +
+    geom_vline(xintercept = head(ashkenazy_1_2_chroma, n=1)$start, colour = "#c2abab", size = 0.8) +
+    geom_vline(xintercept = head(ashkenazy_1_3_chroma, n=1)$start, colour = "#c2abab", size = 0.8) +
+    geom_vline(xintercept = head(ashkenazy_1_4_chroma, n=1)$start, colour = "#c2abab", size = 0.8)
 
-chromagram_ashk_4 <- chromagram(ashkenazy_4_chroma, TRUE) +
+ashk_4_chromaplot <- chromagram(ashkenazy_4_chromagram, TRUE) +
     labs(title = "Chromagram of the 4th sonata", subtitle = "Vladimir Ashkenazy") +
     geom_vline(xintercept = head(ashkenazy_4_2_chroma, n=1)$start, colour = "#c2abab", size = 0.8)
 
-chromagram_ashk_5 <- chromagram(ashkenazy_5_chroma, TRUE) +
-    labs(title = "Chromagram of the 5th sonata", subtitle = "Vladimir Ashkenazy")
+ashk_2_4_chromaplot <- list(ashk_2_chromaplot, ashk_4_chromaplot)
 
-chromagram_ashk_4_5 <- list(chromagram_ashk_4, chromagram_ashk_5)
-
-plot_grid(plotlist = chromagram_ashk_4_5, ncol = 1)
+plot_grid(plotlist = ashk_2_4_chromaplot, ncol = 1)
 ```
 
 ***
+--OLD TEXT--
 Throughout Scriabin's carreer as a composer, you can quite clearly hear how his music starts getting more and more tonally ambiguous. Even to the point where it might not make much sense to discuss it in terms of tonality.
 
 Take the following chromagrams of the 4th and 5th sonata for example. It is not far fetched to say that Scriabin's music has changed the most between these pieces. As a result, you can, albeit without the most confidence, observe how this piece is in F#. The 5th sonata on the other hand does not display display a clear tonic like the previous one does, which makes sense upon giving it a listen.
+--OLD TEXT--
 
 ### From the 5th sonata, each sonata's key starts getting more ambiguous
 
 ```{r load_ashkenazy, include=FALSE, cache=TRUE}
-ashkenazy_2_1 <-
-  get_tidy_audio_analysis("2vNz6dat4cjEJol2AoqIIt") |>
-  select(segments) |>
-  unnest(segments) |>
-  select(start, duration, pitches)
+ashkenazy_5_1 <- ashkenazy %>% filter(sonata == 5, movement == 1)
+ashkenazy_6_1 <- ashkenazy %>% filter(sonata == 8, movement == 1)
 
-ashkenazy_2_2 <-
-  get_tidy_audio_analysis("6pHp6L7zlZDO5LClxp3pYN") |>
-  select(segments) |>
-  unnest(segments) |>
-  select(start, duration, pitches) %>%
-  mutate(start = start + tail(ashkenazy_2_1, n=1)$start)
+late_chroma_comp <- list(ashkenazy_5_1,
+                         ashkenazy_6_1)
 
-ashkenazy_2 <- bind_rows(list(ashkenazy_2_1, ashkenazy_2_2)) %>%
-  mutate(sonata = "Sonata 2") |>
+
+late_chroma_comp <- lapply(late_chroma_comp, chroma_preprocessing)
+
+ashkenazy_5_1_chroma <- late_chroma_comp[[1]] %>% mutate(movement = 1)
+ashkenazy_6_1_chroma <- late_chroma_comp[[2]] %>% mutate(movement = 1)
+
+
+ashkenazy_5_chromagram <- ashkenazy_5_1_chroma |>
   mutate(pitches = map(pitches, compmus_normalise, "euclidean")) |>
-  compmus_gather_chroma() |>
-  ggplot(aes(
-      x = start + duration / 2,
-      width = duration,
-      y = pitch_class,
-      fill = value
-    )
-    ) +
-  geom_tile() +
-  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title = "Sonata 2") +
-  theme_minimal() +
-  scale_fill_viridis_c()
+  compmus_gather_chroma()
 
-ashkenazy_4_chroma <- ashkenazy_4_chroma |>
-  ggplot(aes(
-      x = start + duration / 2,
-      width = duration,
-      y = pitch_class,
-      fill = value
-    )
-    ) +
-  geom_tile() +
-  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title = "Sonata 4") +
-  theme_minimal() +
-  scale_fill_viridis_c()
-
-ashkenazy_6 <-
-  get_tidy_audio_analysis("0NaVN5lDbMkmSwxSiAXMVc") |>
-  select(segments) |>
-  unnest(segments) |>
-  select(start, duration, pitches) %>%
-  mutate(sonata = "Sonata 6") |>
+ashkenazy_6_chromagram <- ashkenazy_6_1_chroma |>
   mutate(pitches = map(pitches, compmus_normalise, "euclidean")) |>
-  compmus_gather_chroma() |>
-  ggplot(aes(
-      x = start + duration / 2,
-      width = duration,
-      y = pitch_class,
-      fill = value
-    )
-    ) +
-  geom_tile() +
-  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title = "Sonata 6") +
-  theme_minimal() +
-  scale_fill_viridis_c()
+  compmus_gather_chroma()
 
-ashkenazy_8 <-
-  get_tidy_audio_analysis("5RKOyVBXa05wImhToOBPcq") |>
-  select(segments) |>
-  unnest(segments) |>
-  select(start, duration, pitches) %>%
-  mutate(sonata = "Sonata 8") |>
-  mutate(pitches = map(pitches, compmus_normalise, "euclidean")) |>
-  compmus_gather_chroma() |>
-  ggplot(aes(
-      x = start + duration / 2,
-      width = duration,
-      y = pitch_class,
-      fill = value
-    )
-    ) +
-  geom_tile() +
-  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title = "Sonata 8") +
-  theme_minimal() +
-  scale_fill_viridis_c()
 
-ashkenazy_10 <-
-  get_tidy_audio_analysis("27H4M1wOVah2qqHq5xbkeM") |>
-  select(segments) |>
-  unnest(segments) |>
-  select(start, duration, pitches) %>%
-  mutate(sonata = "Sonata 10") |>
-  mutate(pitches = map(pitches, compmus_normalise, "euclidean")) |>
-  compmus_gather_chroma() |>
-  ggplot(aes(
-      x = start + duration / 2,
-      width = duration,
-      y = pitch_class,
-      fill = value
-    )
-    ) +
-  geom_tile() +
-  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title = "Sonata 10") +
-  theme_minimal() +
-  scale_fill_viridis_c()
+ashk_5_chromaplot <- chromagram(ashkenazy_5_chromagram, TRUE) +
+    labs(title = "Chromagram of the 5th sonata", subtitle = "Vladimir Ashkenazy")
 
-chroma_ashkenazy <- list(ashkenazy_2, ashkenazy_4_chroma, ashkenazy_6, ashkenazy_8, ashkenazy_10)
+ashk_6_chromaplot <- chromagram(ashkenazy_6_chromagram, TRUE) +
+    labs(title = "Chromagram of the 8th sonata", subtitle = "Vladimir Ashkenazy")
+
+chroma_ashkenazy <- list(ashk_5_chromaplot, ashk_6_chromaplot)
 
 ```
 
-```{r Chromagram_ashkenazy, fig.height=16, fig.width=10}
+```{r Chromagram_ashkenazy}
 plot_grid(plotlist = chroma_ashkenazy, ncol = 1)
 ```
 
 ***
-Here are a couple more chromagrams. Let's look at a couple more pieces, once again performed by Vladimir Ashkenazy just for an example.
-
-<br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br>
+-- ADD TEXT --
 
 ### Aligning different performances
 
 ```{r DTW, cache=TRUE}
-lettberg_5 <-
-  get_tidy_audio_analysis("0bCTqxYSyYP7OawV9cam1V") |>
-  select(segments) |>
-  unnest(segments) |>
-  select(start, duration, pitches)
+ashkenazy_7 <- ashkenazy %>% filter(sonata == 7, movement == 1)
+alexeev_7 <- alexeev %>% filter(sonata == 7, movement == 1)
+
+DTW_recordings <- lapply(list(ashkenazy_7, alexeev_7), chroma_preprocessing)
 
 DTW_plot <- compmus_long_distance(
-  ashkenazy_5_pitches |> mutate(pitches = map(pitches, compmus_normalise, "chebyshev")),
-  lettberg_5 |> mutate(pitches = map(pitches, compmus_normalise, "chebyshev")),
+  DTW_recordings[[1]] |> mutate(pitches = map(pitches, compmus_normalise, "chebyshev")),
+  DTW_recordings[[2]] |> mutate(pitches = map(pitches, compmus_normalise, "chebyshev")),
   feature = pitches,
   method = "euclidean"
 ) |>
@@ -649,20 +599,23 @@ DTW_plot <- compmus_long_distance(
   ) +
   geom_tile() +
   coord_equal() +
-  labs(x = "Vladimir Ashkenazy", y = "Maria Lettberg", title = "Sonata 5") +
+  labs(x = "Vladimir Ashkenazy", y = "Dmitri Alexeev", title = "Sonata 7") +
   theme_minimal() +
-  scale_fill_viridis_c(guide = NULL)
+  scale_fill_viridis_c(guide = NULL) +
+  minute_scalex +
+  minute_scaley +
+  theme(axis.text.x = element_text(angle=-45))
 
 DTW_plot
 ```
 
 ***
-Text.
+-- ADD TEXT --
 
 
 ### It is difficult to gather much information out of timbre
 
-```{r  self_similarity, include=FALSE}
+```{r self_similarity_recordings, include=FALSE}
 lettberg_1_1 <- readRDS(file = "data/pieces/lettberg/lettberg_1_1.RDS")
 lettberg_2_1 <- readRDS(file = "data/pieces/lettberg/lettberg_2_1.RDS")
 lettberg_3_1 <- readRDS(file = "data/pieces/lettberg/lettberg_3_1.RDS")
