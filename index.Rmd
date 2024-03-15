@@ -81,6 +81,224 @@ minute_scalex <- scale_x_continuous(breaks=seq(0,2000,60))
 minute_scaley <- scale_y_continuous(breaks=seq(0,2000,60))
 ```
 
+### Identifying tempo
+```{r load_s_10}
+alexeev_10_1 <- get_tidy_audio_analysis("0AfNaqqufBWDkWKMiDeBGZ")
+```
+
+```{r tempogram_function}
+plot_tempogram <- function(sonata) {  
+  sonata %>%
+  tempogram(window_size = 8, hop_size = 1, cyclic = TRUE) |>
+  ggplot(aes(x = time, y = bpm, fill = power)) +
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +
+  labs(x = "Time (s)", y = "Tempo (BPM)") +
+  theme_classic()
+}
+```
+
+```{r tempogram_10}
+# tempogram_10 <- plot_tempogram(alexeev_10_1)
+```
+
+***
+
+--ADD TEXT--
+
+### sonata 2_2
+```{r load_alex_2}
+alexeev_2_2 <- alexeev %>% filter(sonata == 3, movement == 2)
+```
+
+```{r tempogram_2, cache=TRUE}
+tempogram_2 <- plot_tempogram(alexeev_2_2)
+```
+
+```{r display_plot}
+tempogram_2 <- tempogram_2 +
+  minute_scalex +
+  labs(title = "Tempogram | sonata 3, mvt. 2", subtitle = "Dmitri Alexeev")
+
+tempogram_3_2 <- tempogram_2
+saveRDS(object = tempogram_3_2, file = "data/plots/tempogram_3_2.RDS")
+```
+```{r display_plot_3_2}
+tempogram_3_2 <- readRDS(file = "data/plots/tempogram_3_2.RDS")
+tempogram_3_2
+```
+
+
+***
+We can further analyse a recordings' tempo by...
+
+
+
+
+
+
+### The style of Scriabin
+
+There are many composers who have made a name for themselves when it comes to their contribution to the piano repertoire. One such composer is Alexander Scriabin. However, what seperates him from other composers of similar regard, is the way in which his musical language has developed throughout his life. The influence of Frederic Chopin and other romantic composers can clearly be discerned at the start of his carreer. In spite of that, his music would increasingly veer away from traditional harmony and tonality over the turn of the 20th century. Much like Arnold Schoenberg, he had developed a unique, modernist style of music that would influence many other 20th century composers.
+
+One of my goals is to examine wether Scriabin's changing style could be accurately represented. This development is perhaps best reflected in Scriabin's 10 piano sonatas, which span the majority of his composing carreer. My corpus therefore consists of recordings of these sonatas by four pianists, namely Vladimir Ashkenazy, Maria Lettberg, Igor Zhukov and Dmitri Alexeev. These pieces, much like his other works, leave the performer with room for their own interpretation. So It would perhaps also be interesting to see in what capacity spotify could measure the difference between performers.
+
+When considering tracks of particular interest, the 4th and 5th piano sonatas come to mind. The former being one of his first pieces to display a concrete change in style, and the later being one of the first stepts into truly new territory. Yet despite their differences they do both have a distinct touch of lightness that is in my opinion more difficult to find in his other sonatas. A further look into these pieces may yield intriguing results.
+
+### Comparing the energy and valence for all sonatas
+
+```{r Energy_valence}
+all_recordings_mean_energy_valence <- all_recordings %>%
+  group_by(pianist, period, sonata) %>%
+  summarize(mean_energy = mean(energy),
+            mean_valence = mean(valence),
+            period = factor(period, levels=c("Early", "Middle", "Late")))
+
+zhukov_mean_energy_valence <- all_recordings_mean_energy_valence %>%
+  filter(pianist == "Igor Zhukov")
+
+cols <- c("Early" = "#c2df23", "Middle" = "#1fa187", "Late" = "#440154")
+
+zhukov_plot <- ggplot(zhukov_mean_energy_valence, aes(x = mean_energy, y = mean_valence, color= period)) +
+  annotate("rect", xmin = 0.065, xmax = 0.15, ymin = 0.028, ymax = 0.038, alpha = .2) +
+  geom_point() +
+  scale_y_log10() +
+  scale_x_log10() +
+  # scale_color_grey(start = 0.75, end = 0) +
+  labs(x="Energy", y="Valence", color="Period", title="Energy and Valence for Scriabin's 10 sonatas",
+       subtitle="Igor Zhukov") +
+  annotate(
+    "text",
+    x = 0.1, y = 0.04,
+    label = "Scriabin's late sonatas",
+    vjust = 1, size = 5, color = "grey40"
+  ) +
+  scale_color_manual(values = cols)
+
+ggplotly(zhukov_plot) %>%
+  layout(title = list(text = paste0("Energy and Valence for Scriabin's 10 sonatas <br> <sup>Igor Zhukov</sup>")))
+```
+
+***
+
+This plot displays the valence and energy levels of the sonatas performed by Igor Zhukov, just as an example. If you focus on the valence feature, valence being a measure of positiveness, you might notice that while the differences accross sonatas are small, all the late sonatas seem to lay at a distinct valence level compared to the rest.
+
+Those familiar with the music in question might not be suprised by this. These pieces are very representative of Scriabin's changing musical style, despite the fact that they are individually still unique. 
+
+
+### The late sonatas contain similar valence levels accros all performers
+
+```{r Energy_Valence_all}
+energy_valence_plot <- ggplot(all_recordings_mean_energy_valence, aes(x = mean_energy, y = mean_valence, color= period)) +
+  geom_point() +
+  facet_wrap(~ pianist) +
+  scale_y_log10() +
+  scale_x_log10() +
+  scale_color_manual(values = cols) +
+  labs(x="Energy", y="Valence", color="Period", title="Energy and Valence for Scriabin's 10 sonatas",
+       subtitle="The late sonatas have a distinctly low valence level.") +
+  facet_colour
+
+ggplotly(energy_valence_plot)
+```
+
+***
+
+here you can see the previous results extend very well to other pianists and their recordings. While the energy and valence levels of the early and middle period of Scriabin's works vary quite a bit, the late sonatas all fall on the same range of valence, even across different performers.
+
+At the same time however, the pieces show somewhat of a variance in energy levels across performers. This could perhaps reflect the natural room for interpretation of Scriabin's works, albeit this is hard to say from just this data.
+
+### A piece's tempo can vary quite a bit accross pianists
+```{r tempo_plot}
+tempo_features <- all_recordings |>
+  mutate(
+    sections =
+      map(
+        sections,                                    # sections or segments
+        summarise_at,
+        vars(tempo, loudness, duration),             # features of interest
+        list(section_mean = mean, section_sd = sd)   # aggregation functions
+      )
+  ) |>
+  unnest(sections) |>
+  mutate(duration_min = duration / 60,
+    loudness = factor(loudness),
+    sd_tempo = tempo_section_sd)
+
+test <- tempo_features |>
+  ggplot(
+    aes(
+      group = sonata,
+      x = tempo,
+      y = sd_tempo,
+      colour = period,
+      alpha = loudness
+    )
+  ) +
+  geom_point(aes(size = duration_min)) +
+  geom_rug() +
+  #theme(panel.background = element_rect(fill = "#f5fff2",
+  #                              colour = "#f5fff2")) +
+  theme_minimal() +
+  labs(
+    x = "Mean Tempo (bpm)",
+    y = "SD Tempo",
+    colour = "Genre",
+    size = "Duration (min)",
+    alpha = "Volume (dBFS)",
+    title = "Tempo analysis of the different performers"
+  ) + 
+  facet_wrap(~ pianist) +
+  scale_color_manual(values = cols) +
+  facet_colour
+
+ggplotly_plot <- ggplotly(test)
+```
+```{r}
+ggplotly_plot$x$layout$legend$title$text <- "Duration:    size<br>Loudness:  opacity<br>Period:"
+
+for (i in 1:length(ggplotly_plot$x$data)) {
+  if (grepl("Early", ggplotly_plot$x$data[[i]]$name, fixed = TRUE) == TRUE) {
+    ggplotly_plot$x$data[[i]]$legendgroup <- "Early"
+    ggplotly_plot$x$data[[i]]$name <- "Early"
+    
+    ggplotly_plot$x$data[[i]]$showlegend <- FALSE
+    if (i == 21){
+        ggplotly_plot$x$data[[i]]$showlegend <- TRUE
+    }
+  } else if (grepl("Middle", ggplotly_plot$x$data[[i]]$name, fixed = TRUE) == TRUE) {
+    ggplotly_plot$x$data[[i]]$legendgroup <- "Middle"
+    ggplotly_plot$x$data[[i]]$name <- "Middle"
+    
+    ggplotly_plot$x$data[[i]]$showlegend <- FALSE
+    if (i == 48){
+        ggplotly_plot$x$data[[i]]$showlegend <- TRUE
+    }
+  } else if (grepl("Late", ggplotly_plot$x$data[[i]]$name, fixed = TRUE) == TRUE) {
+    ggplotly_plot$x$data[[i]]$legendgroup <- "Late"
+    ggplotly_plot$x$data[[i]]$name <- "Late"
+    
+
+    ggplotly_plot$x$data[[i]]$showlegend <- FALSE
+    if (i == 71){
+        ggplotly_plot$x$data[[i]]$showlegend <- TRUE
+    }
+  }
+  
+}
+
+ggplotly_plot
+```
+
+
+***
+When comparing different performances of the same pieces, many differences are bound to pop up. Such is the nature of interpretation, you could say. Two variables that are relatively easy to compare and measure are loudness and tempo. How accurate Spotify's analysis actually is, remains difficult to determine, but it couldn't hurt to take a look, right?
+
+As expected, different pianist show quite a different spread when it comes to their tempo and tempo variance throughout their recordings. Maria Lettberg's recordings seem to all be quite consistent, while Vladimir Ashkenazy takes a lot more liberty when it comes to tempo. Besides that, Igor Zhukov's recordings all seem to be consistently louder. This might also just be a result of the different recording processes.
+
+
+
+
 ### Spotify is not very certain about the late sonata's keys
 ```{r keys_sonatas}
 all_recordings %>%
@@ -103,6 +321,83 @@ Taking a look at the later half of Scriabin's sonatas, it quickly becomes clear 
 Perhaps different pianists might naturally bring forward different pitches throughout these kinds of pieces, consciously or not. Or perhaps this is a result of the recording process, where different equipment, studios and 'finishing touches' might alter the pitch content of a recording.
 
 On top of that, the key confidence feature also shows that Spotify itself is aware of its uncertainty to some degree. I've mapped Spotify's key_confidence feature to the opacity value of each recording. Some of the recordings are noticeably more opaque than the rest, but it's difficult to tell what might have caused that other than the fact that these pieces are simply tonally ambiguous.
+
+
+### How clearly does a chromagram show a sonata's key?
+
+```{r early_sonatas_chromagram, include=FALSE}
+ashkenazy_1_1 <- ashkenazy %>% filter(sonata == 3, movement == 1)
+ashkenazy_1_2 <- ashkenazy %>% filter(sonata == 3, movement == 2)
+ashkenazy_1_3 <- ashkenazy %>% filter(sonata == 3, movement == 3)
+ashkenazy_1_4 <- ashkenazy %>% filter(sonata == 3, movement == 4)
+
+ashkenazy_4_1 <- ashkenazy %>% filter(sonata == 4, movement == 1)
+ashkenazy_4_2 <- ashkenazy %>% filter(sonata == 4, movement == 2)
+
+early_chroma_comparison <- list(ashkenazy_1_1,
+                          ashkenazy_1_2,
+                          ashkenazy_1_3,
+                          ashkenazy_1_4,
+                          ashkenazy_4_1,
+                          ashkenazy_4_2)
+
+early_chroma_comparison <- lapply(early_chroma_comparison, chroma_preprocessing)
+
+ashkenazy_1_1_chroma <- early_chroma_comparison[[1]] %>% mutate(movement = 1)
+ashkenazy_1_2_chroma <- early_chroma_comparison[[2]] %>% mutate(movement = 2,
+                                                         start = start + tail(ashkenazy_1_1_chroma, n=1)$start)
+ashkenazy_1_3_chroma <- early_chroma_comparison[[3]] %>% mutate(movement = 3,
+                                                          start = start + tail(ashkenazy_1_2_chroma, n=1)$start)
+ashkenazy_1_4_chroma <- early_chroma_comparison[[4]] %>% mutate(movement = 4,
+                                                          start = start + tail(ashkenazy_1_3_chroma, n=1)$start)
+
+
+ashkenazy_4_1_chroma <- early_chroma_comparison[[3]] %>% mutate(movement = 1)
+ashkenazy_4_2_chroma <- early_chroma_comparison[[4]] %>% mutate(movement = 2,
+                                                          start = start + tail(ashkenazy_4_1_chroma, n=1)$start)
+
+ashkenazy_2_pitches <- bind_rows(list(ashkenazy_1_1_chroma,
+                                      ashkenazy_1_2_chroma,
+                                      ashkenazy_1_3_chroma,
+                                      ashkenazy_1_4_chroma
+                                      )) %>%
+    mutate(sonata = "Sonata 1")
+  
+ashkenazy_4_pitches <- bind_rows(list(ashkenazy_4_1_chroma,
+                                      ashkenazy_4_2_chroma)) %>%
+    mutate(sonata = "Sonata 4")
+```
+
+```{r Chromagram_3_4}
+ashkenazy_2_chromagram <- ashkenazy_2_pitches |>
+  mutate(pitches = map(pitches, compmus_normalise, "euclidean")) |>
+  compmus_gather_chroma()
+
+ashkenazy_4_chromagram <- ashkenazy_4_pitches |>
+  mutate(pitches = map(pitches, compmus_normalise, "euclidean")) |>
+  compmus_gather_chroma()
+
+ashk_2_chromaplot <- chromagram(ashkenazy_2_chromagram, TRUE) +
+    labs(title = "Chromagram of the 3rd sonata", subtitle = "Vladimir Ashkenazy") +
+    geom_vline(xintercept = head(ashkenazy_1_2_chroma, n=1)$start, colour = "#c2abab", size = 0.8) +
+    geom_vline(xintercept = head(ashkenazy_1_3_chroma, n=1)$start, colour = "#c2abab", size = 0.8) +
+    geom_vline(xintercept = head(ashkenazy_1_4_chroma, n=1)$start, colour = "#c2abab", size = 0.8)
+
+ashk_4_chromaplot <- chromagram(ashkenazy_4_chromagram, TRUE) +
+    labs(title = "Chromagram of the 4th sonata", subtitle = "Vladimir Ashkenazy") +
+    geom_vline(xintercept = head(ashkenazy_4_2_chroma, n=1)$start, colour = "#c2abab", size = 0.8)
+
+ashk_2_4_chromaplot <- list(ashk_2_chromaplot, ashk_4_chromaplot)
+
+plot_grid(plotlist = ashk_2_4_chromaplot, ncol = 1)
+```
+
+***
+--OLD TEXT--
+Throughout Scriabin's carreer as a composer, you can quite clearly hear how his music starts getting more and more tonally ambiguous. Even to the point where it might not make much sense to discuss it in terms of tonality.
+
+Take the following chromagrams of the 4th and 5th sonata for example. It is not far fetched to say that Scriabin's music has changed the most between these pieces. As a result, you can, albeit without the most confidence, observe how this piece is in F#. The 5th sonata on the other hand does not display display a clear tonic like the previous one does, which makes sense upon giving it a listen.
+--OLD TEXT--
 
 ### Tonality is identifyable in early works...
 ```{r chord_masks, include=FALSE}
@@ -323,6 +618,7 @@ The development section continues in B major, before quickly and briefly shiftin
 
 These key changes are reflected quite well in the keygram, although it certainly helps to know them beforehand.
 
+
 ### What about the later sonatas?
 ```{r plot_key_est_s9}
 key_9_1 <- plot_key_chords(zhukov_9_1, "octatonic") +
@@ -339,198 +635,6 @@ There's a lot that can be said about Scriabin's harmonic language. One important
 
 It is admittedly quite hard to say whether these results hold any weight. The plot does seem to consistently mark certain sections to use a certain octatonic scale. I've looked through the score and confirmed that some of these sections do indeed use the pitches of these octatonic scales. However, the same cannot be said for the other sonatas, some of which also do make use of this scale. There's also the fact that my mask only makes a distinction with the key's 'starting' pitch, the pitches within the octatonic scale and the rest of the pitches. The masks is very simple and likely does not properly convey to which degree each pitch supports an octatonic key.
 
-### A piece's tempo can vary quite a bit accross pianists
-```{r tempo_plot}
-tempo_features <- all_recordings |>
-  mutate(
-    sections =
-      map(
-        sections,                                    # sections or segments
-        summarise_at,
-        vars(tempo, loudness, duration),             # features of interest
-        list(section_mean = mean, section_sd = sd)   # aggregation functions
-      )
-  ) |>
-  unnest(sections)
-
-tempo_features |>
-  ggplot(
-    aes(
-      x = tempo,
-      y = tempo_section_sd,
-      colour = period,
-      alpha = loudness
-    )
-  ) +
-  geom_point(aes(size = duration / 60)) +
-  geom_rug() +
-  #theme(panel.background = element_rect(fill = "#f5fff2",
-  #                              colour = "#f5fff2")) +
-  theme_minimal() +
-  labs(
-    x = "Mean Tempo (bpm)",
-    y = "SD Tempo",
-    colour = "Genre",
-    size = "Duration (min)",
-    alpha = "Volume (dBFS)",
-    title = "Tempo analysis of the different performers"
-  ) + 
-  facet_wrap(~ pianist) +
-  scale_color_manual(values = cols) +
-  facet_colour
-```
-
-***
-When comparing different performances of the same pieces, many differences are bound to pop up. Such is the nature of interpretation, you could say. Two variables that are relatively easy to compare and measure are loudness and tempo. How accurate Spotify's analysis actually is, remains difficult to determine, but it couldn't hurt to take a look, right?
-
-As expected, different pianist show quite a different spread when it comes to their tempo and tempo variance throughout their recordings. Maria Lettberg's recordings seem to all be quite consistent, while Vladimir Ashkenazy takes a lot more liberty when it comes to tempo. Besides that, Igor Zhukov's recordings all seem to be consistently louder. This might also just be a result of the different recording processes.
-
-### The style of Scriabin 
-
-There are many composers who have made a name for themselves when it comes to their contribution to the piano repertoire. One such composer is Alexander Scriabin. However, what seperates him from other composers of similar regard, is the way in which his musical language has developed throughout his life. The influence of Frederic Chopin and other romantic composers can clearly be discerned at the start of his carreer. In spite of that, his music would increasingly veer away from traditional harmony and tonality over the turn of the 20th century. Much like Arnold Schoenberg, he had developed a unique, modernist style of music that would influence many other 20th century composers.
-
-One of my goals is to examine wether Scriabin's changing style could be accurately represented. This development is perhaps best reflected in Scriabin's 10 piano sonatas, which span the majority of his composing carreer. My corpus therefore consists of recordings of these sonatas by four pianists, namely Vladimir Ashkenazy, Maria Lettberg, Igor Zhukov and Dmitri Alexeev. These pieces, much like his other works, leave the performer with room for their own interpretation. So It would perhaps also be interesting to see in what capacity spotify could measure the difference between performers.
-
-When considering tracks of particular interest, the 4th and 5th piano sonatas come to mind. The former being one of his first pieces to display a concrete change in style, and the later being one of the first stepts into truly new territory. Yet despite their differences they do both have a distinct touch of lightness that is in my opinion more difficult to find in his other sonatas. A further look into these pieces may yield intriguing results.
-
-### Comparing the energy and valence for all sonatas
-
-```{r Energy_valence}
-all_recordings_mean_energy_valence <- all_recordings %>%
-  group_by(pianist, period, sonata) %>%
-  summarize(mean_energy = mean(energy),
-            mean_valence = mean(valence),
-            period = factor(period, levels=c("Early", "Middle", "Late")))
-
-zhukov_mean_energy_valence <- all_recordings_mean_energy_valence %>%
-  filter(pianist == "Igor Zhukov")
-
-cols <- c("Early" = "#c2df23", "Middle" = "#1fa187", "Late" = "#440154")
-
-zhukov_plot <- ggplot(zhukov_mean_energy_valence, aes(x = mean_energy, y = mean_valence, color= period)) +
-  annotate("rect", xmin = 0.065, xmax = 0.15, ymin = 0.028, ymax = 0.038, alpha = .2) +
-  geom_point() +
-  scale_y_log10() +
-  scale_x_log10() +
-  # scale_color_grey(start = 0.75, end = 0) +
-  labs(x="Energy", y="Valence", color="Period", title="Energy and Valence for Scriabin's 10 sonatas",
-       subtitle="Igor Zhukov") +
-  annotate(
-    "text",
-    x = 0.1, y = 0.04,
-    label = "Scriabin's late sonatas",
-    vjust = 1, size = 5, color = "grey40"
-  ) +
-  scale_color_manual(values = cols)
-
-ggplotly(zhukov_plot) %>%
-  layout(title = list(text = paste0("Energy and Valence for Scriabin's 10 sonatas <br> <sup>Igor Zhukov</sup>")))
-```
-
-***
-
-This plot displays the valence and energy levels of the sonatas performed by Igor Zhukov, just as an example. If you focus on the valence feature, valence being a measure of positiveness, you might notice that while the differences accross sonatas are small, all the late sonatas seem to lay at a distinct valence level compared to the rest.
-
-Those familiar with the music in question might not be suprised by this. These pieces are very representative of Scriabin's changing musical style, despite the fact that they are individually still unique. 
-
-
-### The late sonatas contain similar valence levels accros all performers
-
-```{r Energy_Valence_all}
-energy_valence_plot <- ggplot(all_recordings_mean_energy_valence, aes(x = mean_energy, y = mean_valence, color= period)) +
-  geom_point() +
-  facet_wrap(~ pianist) +
-  scale_y_log10() +
-  scale_x_log10() +
-  scale_color_manual(values = cols) +
-  labs(x="Energy", y="Valence", color="Period", title="Energy and Valence for Scriabin's 10 sonatas",
-       subtitle="The late sonatas have a distinctly low valence level.") +
-  facet_colour
-
-ggplotly(energy_valence_plot)
-```
-
-***
-
-here you can see the previous results extend very well to other pianists and their recordings. While the energy and valence levels of the early and middle period of Scriabin's works vary quite a bit, the late sonatas all fall on the same range of valence, even across different performers.
-
-At the same time however, the pieces show somewhat of a variance in energy levels across performers. This could perhaps reflect the natural room for interpretation of Scriabin's works, albeit this is hard to say from just this data.
-
-### How clearly does a chromagram show a sonata's key?
-
-```{r early_sonatas_chromagram, include=FALSE}
-ashkenazy_1_1 <- ashkenazy %>% filter(sonata == 3, movement == 1)
-ashkenazy_1_2 <- ashkenazy %>% filter(sonata == 3, movement == 2)
-ashkenazy_1_3 <- ashkenazy %>% filter(sonata == 3, movement == 3)
-ashkenazy_1_4 <- ashkenazy %>% filter(sonata == 3, movement == 4)
-
-ashkenazy_4_1 <- ashkenazy %>% filter(sonata == 4, movement == 1)
-ashkenazy_4_2 <- ashkenazy %>% filter(sonata == 4, movement == 2)
-
-early_chroma_comparison <- list(ashkenazy_1_1,
-                          ashkenazy_1_2,
-                          ashkenazy_1_3,
-                          ashkenazy_1_4,
-                          ashkenazy_4_1,
-                          ashkenazy_4_2)
-
-early_chroma_comparison <- lapply(early_chroma_comparison, chroma_preprocessing)
-
-ashkenazy_1_1_chroma <- early_chroma_comparison[[1]] %>% mutate(movement = 1)
-ashkenazy_1_2_chroma <- early_chroma_comparison[[2]] %>% mutate(movement = 2,
-                                                         start = start + tail(ashkenazy_1_1_chroma, n=1)$start)
-ashkenazy_1_3_chroma <- early_chroma_comparison[[3]] %>% mutate(movement = 3,
-                                                          start = start + tail(ashkenazy_1_2_chroma, n=1)$start)
-ashkenazy_1_4_chroma <- early_chroma_comparison[[4]] %>% mutate(movement = 4,
-                                                          start = start + tail(ashkenazy_1_3_chroma, n=1)$start)
-
-
-ashkenazy_4_1_chroma <- early_chroma_comparison[[3]] %>% mutate(movement = 1)
-ashkenazy_4_2_chroma <- early_chroma_comparison[[4]] %>% mutate(movement = 2,
-                                                          start = start + tail(ashkenazy_4_1_chroma, n=1)$start)
-
-ashkenazy_2_pitches <- bind_rows(list(ashkenazy_1_1_chroma,
-                                      ashkenazy_1_2_chroma,
-                                      ashkenazy_1_3_chroma,
-                                      ashkenazy_1_4_chroma
-                                      )) %>%
-    mutate(sonata = "Sonata 1")
-  
-ashkenazy_4_pitches <- bind_rows(list(ashkenazy_4_1_chroma,
-                                      ashkenazy_4_2_chroma)) %>%
-    mutate(sonata = "Sonata 4")
-```
-
-```{r Chromagram_3_4}
-ashkenazy_2_chromagram <- ashkenazy_2_pitches |>
-  mutate(pitches = map(pitches, compmus_normalise, "euclidean")) |>
-  compmus_gather_chroma()
-
-ashkenazy_4_chromagram <- ashkenazy_4_pitches |>
-  mutate(pitches = map(pitches, compmus_normalise, "euclidean")) |>
-  compmus_gather_chroma()
-
-ashk_2_chromaplot <- chromagram(ashkenazy_2_chromagram, TRUE) +
-    labs(title = "Chromagram of the 3rd sonata", subtitle = "Vladimir Ashkenazy") +
-    geom_vline(xintercept = head(ashkenazy_1_2_chroma, n=1)$start, colour = "#c2abab", size = 0.8) +
-    geom_vline(xintercept = head(ashkenazy_1_3_chroma, n=1)$start, colour = "#c2abab", size = 0.8) +
-    geom_vline(xintercept = head(ashkenazy_1_4_chroma, n=1)$start, colour = "#c2abab", size = 0.8)
-
-ashk_4_chromaplot <- chromagram(ashkenazy_4_chromagram, TRUE) +
-    labs(title = "Chromagram of the 4th sonata", subtitle = "Vladimir Ashkenazy") +
-    geom_vline(xintercept = head(ashkenazy_4_2_chroma, n=1)$start, colour = "#c2abab", size = 0.8)
-
-ashk_2_4_chromaplot <- list(ashk_2_chromaplot, ashk_4_chromaplot)
-
-plot_grid(plotlist = ashk_2_4_chromaplot, ncol = 1)
-```
-
-***
---OLD TEXT--
-Throughout Scriabin's carreer as a composer, you can quite clearly hear how his music starts getting more and more tonally ambiguous. Even to the point where it might not make much sense to discuss it in terms of tonality.
-
-Take the following chromagrams of the 4th and 5th sonata for example. It is not far fetched to say that Scriabin's music has changed the most between these pieces. As a result, you can, albeit without the most confidence, observe how this piece is in F#. The 5th sonata on the other hand does not display display a clear tonic like the previous one does, which makes sense upon giving it a listen.
---OLD TEXT--
 
 ### From the 5th sonata, each sonata's key starts getting more ambiguous
 
@@ -573,6 +677,7 @@ plot_grid(plotlist = chroma_ashkenazy, ncol = 1)
 
 ***
 -- ADD TEXT --
+
 
 ### Aligning different performances
 
