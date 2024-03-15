@@ -81,7 +81,7 @@ minute_scalex <- scale_x_continuous(breaks=seq(0,2000,60))
 minute_scaley <- scale_y_continuous(breaks=seq(0,2000,60))
 ```
 
-### sonata 2_2
+### Tempo and rythm in Scriabin's music
 
 ```{r display_plot_3_2}
 tempogram_3_2 <- readRDS(file = "data/plots/tempogram_3_2.RDS")
@@ -95,7 +95,7 @@ Some music is very suitable for these kinds of analyses, as well as music that i
 
 This is another problem apart from the natural use of rubato. The 'beat' in Scriabin's music, like that of some of his contemporaries, is often very obscure to begin with. His frequent use of different polyrhythm and triplets, quintuplets or even septuplets, all contribute to creating rhythmically complex passages.
 
-### Identifying tempo
+### His late sonata's crank it up a notch
 
 ```{r tempogram_function}
 plot_tempogram <- function(sonata) {  
@@ -115,7 +115,7 @@ tempogram_10
 ```
 
 ***
-This rhythmic complexity
+This rhythmic complexity certainly does not let up in his later works. 
 
 
 
