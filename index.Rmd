@@ -19,10 +19,10 @@ library(plotly)
 ```
 
 ```{r corpus, include=FALSE, cache=TRUE}
-lettberg <- readRDS(file = "data/playlists/lettberg-playlist.RDS") |> add_audio_analysis()
-ashkenazy <- readRDS(file = "data/playlists/ashkenazy-playlist.RDS") |> add_audio_analysis()
-alexeev <- readRDS(file = "data/playlists/alexeev-playlist.RDS") |> add_audio_analysis()
-zhukov <- readRDS(file = "data/playlists/zhukov-playlist.RDS") |> add_audio_analysis()
+lettberg <- readRDS(file = "data/playlists/lettberg-playlist.RDS")
+ashkenazy <- readRDS(file = "data/playlists/ashkenazy-playlist.RDS")
+alexeev <- readRDS(file = "data/playlists/alexeev-playlist.RDS")
+zhukov <- readRDS(file = "data/playlists/zhukov-playlist.RDS")
 
 pianists <- list(lettberg, ashkenazy, alexeev, zhukov)
 all_recordings <- bind_rows(pianists) %>%
@@ -158,7 +158,10 @@ zhukov_mean_energy_valence <- all_recordings_mean_energy_valence %>%
 
 cols <- c("Early" = "#c2df23", "Middle" = "#1fa187", "Late" = "#440154")
 
-zhukov_plot <- ggplot(zhukov_mean_energy_valence, aes(x = mean_energy, y = mean_valence, color= period)) +
+zhukov_plot <- ggplot(zhukov_mean_energy_valence, aes(x = mean_energy,
+                                                      y = mean_valence,
+                                                      color= period,
+                                                      group = sonata)) +
   annotate("rect", xmin = 0.065, xmax = 0.15, ymin = 0.028, ymax = 0.038, alpha = .2) +
   geom_point() +
   scale_y_log10() +
@@ -188,7 +191,10 @@ Those familiar with the music in question might not be suprised by this. These p
 ### The late sonatas contain similar valence levels accros all performers
 
 ```{r Energy_Valence_all}
-energy_valence_plot <- ggplot(all_recordings_mean_energy_valence, aes(x = mean_energy, y = mean_valence, color= period)) +
+energy_valence_plot <- ggplot(all_recordings_mean_energy_valence, aes(x = mean_energy,
+                                                                      y = mean_valence,
+                                                                      color = period,
+                                                                      group = sonata)) +
   geom_point() +
   facet_wrap(~ pianist) +
   scale_y_log10() +
@@ -222,16 +228,17 @@ tempo_features <- all_recordings |>
   unnest(sections) |>
   mutate(duration_min = duration / 60,
     loudness = factor(loudness),
-    sd_tempo = tempo_section_sd)
+    sd_tempo = tempo_section_sd,
+    sonata = paste(as.character(sonata), ", mvt: ", movement, sep=""))
 
 test <- tempo_features |>
   ggplot(
     aes(
-      group = sonata,
       x = tempo,
       y = sd_tempo,
       colour = period,
-      alpha = loudness
+      alpha = loudness,
+      group = sonata
     )
   ) +
   geom_point(aes(size = duration_min)) +
@@ -293,9 +300,9 @@ ggplotly_plot
 ***
 When comparing different performances of the same pieces, many differences are bound to pop up. Such is the nature of interpretation, you could say. Two variables that are relatively easy to compare and measure are loudness and tempo. How accurate Spotify's analysis actually is, remains difficult to determine, but it couldn't hurt to take a look, right?
 
-As expected, different pianist show quite a different spread when it comes to their tempo and tempo variance throughout their recordings. Maria Lettberg's recordings seem to all be quite consistent, while Vladimir Ashkenazy takes a lot more liberty when it comes to tempo. Besides that, Igor Zhukov's recordings all seem to be consistently louder. This might also just be a result of the different recording processes.
+As expected, different pianist show quite a different spread when it comes to their tempo and tempo variance throughout their recordings. Maria Lettberg's recordings seem to all be quite consistent, while Vladimir Ashkenazy takes a lot more liberty when it comes to tempo. Moreover, taking a look at the 7th sonata specifically for instance shows how Lettberg's variance in tempo is exceptionally low compared to the other pianists. Besides that, Igor Zhukov's recordings all seem to be consistently louder. This might also just be a result of the different recording processes.
 
-
+As mentioned however, we should take these values with a grain of salt. When looking at the 7th sonata again, Ashkenazy's mean bpm is around 70, while Alexeev's is around 170. You can not take away that Alexeev is playing this piece twice as fast from these numbers however, since both recordings are around 12 minutes long.
 
 
 ### Spotify is not very certain about the late sonata's keys
@@ -721,7 +728,9 @@ DTW_plot
 <iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/7EYRKteYYguJuCMvH1MA2e?utm_source=generator&theme=0" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" data-external="1"></iframe>
 ```
 
-Chromagrams can also be used to align different performances of the same music. To put it shortly, this is done by matching similar segments of the chromagrams.
+We previously saw how the 7th sonata seemed to be played quite differently when it came to [tempo](). We can look into this a little further using the recordings´ chromagrams. Besides showing us the pitch content of a recording, they can also be used to align different performances of the same music. To put it shortly, this is done by matching similar segments of the chromagrams.
+
+The alignment itself can be seen in the darkblue diagonal line in this plot. We can for instance see how Letberg and Ashkenazy were playing the same musical fragment at around 300 and 270 respectively. As expected, the performers don't quite seem to be in sync.
 
 ### It is difficult to gather much information out of timbre
 
