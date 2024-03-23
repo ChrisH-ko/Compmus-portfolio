@@ -16,6 +16,10 @@ library(spotifyr)
 library(compmus)
 library(cowplot)
 library(plotly)
+
+library(tidymodels)
+library(ggdendro)
+library(heatmaply)
 ```
 
 ```{r corpus, include=FALSE, cache=TRUE}
@@ -29,7 +33,8 @@ all_recordings <- bind_rows(pianists) %>%
     mutate(period = replace(sonata, sonata < 11, "Late")) %>%
     mutate(period = replace(period, sonata < 6, "Middle")) %>%
     mutate(period = replace(period, sonata < 4, "Early")) %>%
-    mutate(period = factor(period, levels=c("Early", "Middle", "Late")))
+    mutate(period = factor(period, levels=c("Early", "Middle", "Late"))) %>%
+    mutate(identifier = paste(as.character(sonata), movement, pianist))
 ```
 
 ```{r functions_chromagram, include=FALSE}
@@ -81,53 +86,371 @@ minute_scalex <- scale_x_continuous(breaks=seq(0,2000,60))
 minute_scaley <- scale_y_continuous(breaks=seq(0,2000,60))
 ```
 
-### His early sonata's often have an unstable pulse
+### Applying supervised learning on Scriabin
 
-```{r display_plot_3_2}
-tempogram_3_2 <- readRDS(file = "data/plots/tempogram_3_2.RDS")
-tempogram_3_2
+```{r test_set_load, cache=TRUE}
+sofrontsky <- get_playlist_audio_features("", "1Dm4bMspnpHqQxFd77xJ6O") |>
+  add_audio_analysis() %>%
+  mutate(sonata = as.numeric(gsub(".*?([0-9]+).*", "\\1", track.name))) %>%
+  mutate(pianist = "Vladimir Sofronitsky") %>%
+  group_by(sonata) %>%
+  mutate(movement = as.character(row_number()))
+
+hamelin <- get_playlist_audio_features("", "6DqxZs1asow4mttEUzXm9A") |>
+  add_audio_analysis() %>%
+  mutate(sonata = as.numeric(gsub(".*?([0-9]+).*", "\\1", track.name))) %>%
+  mutate(pianist = "Marc-André Hamelin") %>%
+  group_by(sonata) %>%
+  mutate(movement = as.character(row_number()))
+```
+
+```{r new_recordings_process}
+new_pianists <- bind_rows(list(sofrontsky, hamelin)) %>%
+    mutate(period = replace(sonata, sonata < 11, "Late")) %>%
+    mutate(period = replace(period, sonata < 6, "Middle")) %>%
+    mutate(period = replace(period, sonata < 4, "Early")) %>%
+    mutate(period = factor(period, levels=c("Early", "Middle", "Late"))) %>%
+    mutate(identifier = paste(as.character(sonata), movement, pianist))
+```
+
+```{r train_test_preprocess, cache=TRUE}
+all_data <- bind_rows(all_recordings, new_pianists)
+
+features <-
+  all_data |>  # For your portfolio, change this to the name of your corpus.
+  mutate(
+    segments = map2(segments, key, compmus_c_transpose),
+    pitches =
+      map(
+        segments,
+        compmus_summarise, pitches,
+        method = "mean", norm = "manhattan"
+      ),
+    timbre =
+      map(
+        segments,
+        compmus_summarise, timbre,
+        method = "mean",
+      )
+  ) |>
+  mutate(pitches = map(pitches, compmus_normalise, "clr")) |>
+  mutate_at(vars(pitches, timbre), map, bind_rows) |>
+  unnest(cols = c(pitches, timbre)) %>%
+  select(energy, valence, sonata:c12)
+```
+
+```{r train_test_split}
+set.seed(2)
+sonatas_split <- initial_split(features, prop = 2/3)
+train_sonatas <- training(sonatas_split) %>% mutate(set = "Train set")
+test_sonatas <- testing(sonatas_split) %>% mutate(set = "Test set")
+```
+
+```{r train_test_plot}
+ml_plot_data <- bind_rows(train_sonatas, test_sonatas) %>%
+  mutate(set = factor(set, levels=c("Train set", "Test set")))
+
+ml_data_plot <- ggplot(ml_plot_data, aes(x = energy,
+                                      y = valence,
+                                      color = period,
+                                      group = sonata)) +
+  geom_point() +
+  facet_wrap(~ set) +
+  scale_y_log10() +
+  scale_x_log10() +
+  scale_color_manual(values = cols) +
+  labs(x="Energy", y="Valence", color="Period", title="Energy and Valence for Scriabin's 10 sonatas",
+       subtitle="The late sonatas have a distinctly low valence level.") +
+  facet_colour
+
+ggplotly(ml_data_plot)
 ```
 
 ***
-```{=html}
-<iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/1mAFblavddIx3EkA4O9xwG?utm_source=generator&theme=0" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" data-external="1"></iframe>
+--TEXT--
+
+### Random forest results.
+```{r class_functions}
+get_conf_mat <- function(fit) {
+  outcome <- .get_tune_outcome_names(fit)
+  fit |> 
+    collect_predictions() |> 
+    conf_mat(truth = outcome, estimate = .pred_class)
+}  
+
+get_pr <- function(fit) {
+  fit |> 
+    conf_mat_resampled() |> 
+    group_by(Prediction) |> mutate(precision = Freq / sum(Freq)) |> 
+    group_by(Truth) |> mutate(recall = Freq / sum(Freq)) |> 
+    ungroup() |> filter(Prediction == Truth) |> 
+    select(class = Prediction, precision, recall)
+}  
 ```
 
-We can also attempt to analyse a recording's tempo by finding its most consistent frequency between onsets. The Spotify API does a lot of the heavy lifting by providing us with a recording's onsets. Those can be used to make a Fourier-based tempogram which shows us at what frequency onsets appear throughout the recording.
-
-Some music is very suitable for these kinds of analyses, as well as music that is a little less suitable. Our corpus unfortunately falls under the latter. Scriabin's music is generally very free in expression and tempo, which was not uncommon for a late-romantic, or early modernist composer. It is therefore also not unexpected that performers play his music with a lot of rubato. You can see how the tempogram of the second movement of his third sonata is quite literally all over the place, which is in my opinion one of the more 'rhythmically stable' parts of his sonatas.
-
-This is another problem apart from the natural use of rubato. The 'beat' in Scriabin's music, like that of some of his contemporaries, is often very obscure to begin with. His frequent use of different polyrhythm and triplets, quintuplets or even septuplets, all contribute to creating rhythmically complex passages, To great effect in especially his later sonatas.
-
-### His late sonata's crank it up a notch
-
-```{r tempogram_function}
-plot_tempogram <- function(sonata) {  
-  sonata %>%
-  tempogram(window_size = 8, hop_size = 1, cyclic = TRUE) |>
-  ggplot(aes(x = time, y = bpm, fill = power)) +
-  geom_raster() +
-  scale_fill_viridis_c(guide = "none") +
-  labs(x = "Time (s)", y = "Tempo (BPM)") +
-  theme_classic()
-}
+```{r ml_recipe}
+sonata_rec <-
+  recipe(
+    period ~
+      # danceability +
+      # energy +
+      # loudness +
+      # speechiness +
+      # acousticness +
+      # instrumentalness +
+      # liveness +
+      # valence +
+      # tempo +
+      # duration
+      C + `C#|Db` + D + `D#|Eb` +
+      E + `F` + `F#|Gb` + G +
+      `G#|Ab` + A + `A#|Bb` + B +
+      c01 + c02 + c03 + c04 + c05 + c06 +
+      c07 + c08 + c09 + c10 + c11 + c12,
+    data = train_sonatas           # Use the same name as the previous block.
+  ) |>
+  step_center(all_predictors()) |>
+  step_scale(all_predictors())      # Converts to z-scores.
+  # step_range(all_predictors())    # Sets range to [0, 1].
 ```
 
-```{r display_tempogram_10}
-tempogram_10 <- readRDS(file = "data/plots/tempogram_10.RDS")
-tempogram_10
+```{r cross_valid}
+set.seed(2)
+train_cv <- train_sonatas |> vfold_cv(5)
+```
+
+```{r forest_model_fit}
+forest_model <-
+  rand_forest(
+    mtry = tune(),
+    trees = 500,
+    min_n = tune()) |>
+  set_mode("classification") |> 
+  set_engine("ranger", importance = "impurity")
+
+sonata_wf <- workflow() |> 
+  add_recipe(sonata_rec) |> 
+  add_model(forest_model) 
+
+# sonata_forest <- 
+#  sonata_model |> 
+#  fit_resamples(
+#    sonata_cv, 
+#    control = control_resamples(save_pred = TRUE)
+#  )
+```
+
+```{r broad_tuning, cache=TRUE, include=FALSE}
+set.seed(2)
+broad_tune <- tune_grid(
+  sonata_wf,
+  resamples = train_cv,
+  grid = 40
+)
+
+broad_tune %>%
+  collect_metrics() %>%
+  filter(.metric == "roc_auc") %>%
+  select(mean, min_n, mtry) %>%
+  pivot_longer(min_n:mtry,
+    values_to = "value",
+    names_to = "parameter"
+  ) %>%
+  ggplot(aes(value, mean, color = parameter)) +
+  geom_point(show.legend = FALSE) +
+  facet_wrap(~parameter, scales = "free_x") +
+  labs(x = NULL, y = "AUC")
+```
+
+```{r finer_tune, cache=TRUE, include=FALSE}
+finer_grid <- grid_regular(
+  mtry(range = c(1, 7)),
+  min_n(range = c(1, 30)),
+  levels = 5
+)
+
+set.seed(2)
+finer_tune <- tune_grid(
+  sonata_wf,
+  resamples = train_cv,
+  grid = finer_grid
+)
+
+finer_tune %>%
+  collect_metrics() %>%
+  filter(.metric == "roc_auc") %>%
+  mutate(min_n = factor(min_n)) %>%
+  ggplot(aes(mtry, mean, color = min_n)) +
+  geom_line(alpha = 0.5, size = 1.5) +
+  geom_point() +
+  labs(y = "AUC")
+```
+
+```{r select_best_model, include=FALSE}
+best_auc <- select_best(finer_tune, "roc_auc")
+
+final_rf <- finalize_model(
+  forest_model,
+  best_auc
+)
+
+final_rf
+```
+
+```{r create_fit}
+final_wf <- workflow() %>%
+  add_recipe(sonata_rec) %>%
+  add_model(final_rf)
+
+final_res <- final_wf %>%
+  last_fit(sonatas_split)
+```
+
+```{r model_predictions}
+forest <- final_res$.workflow[[1]]
+
+test_sonatas$predict <- predict(forest, test_sonatas)
+train_sonatas$predict <- predict(forest, train_sonatas)
+
+forest_results <- bind_rows(test_sonatas %>% mutate(type = "Actual", label = period),
+                            test_sonatas %>% mutate(type = "Prediction", label = predict$.pred_class),
+                            train_sonatas %>% mutate(type = "Actual", label = period),
+                            train_sonatas %>% mutate(type = "Prediction", label = predict$.pred_class)) %>%
+  mutate(set = factor(set, levels=c("Train set", "Test set")),
+        type = factor(type, levels=c("Actual", "Prediction")))
+
+test_predict <- ggplot(forest_results, aes(x = energy,
+                                                                      y = valence,
+                                                                      color = label,
+                                                                      group = sonata)) +
+  geom_point() + 
+  facet_grid(type ~ set) +
+  scale_y_log10() +
+  scale_x_log10() +
+  scale_color_manual(values = cols) +
+  labs(x="Energy", y="Valence", color="Period", title="Random forest train and test results") +
+  facet_colour
+
+ggplotly(test_predict)
 ```
 
 ***
-```{=html}
-<iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/0AfNaqqufBWDkWKMiDeBGZ?utm_source=generator&theme=0" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"  data-external="1"></iframe>
+--TEXT--
+
+### Test results
+
+```{r cv_test}
+test_sonatas <- test_sonatas %>%
+  mutate(label = predict$.pred_class)
+
+test_sonatas %>%
+  ungroup() %>%
+  conf_mat(truth = period, estimate = label) %>%
+  autoplot(type = "heatmap")
 ```
 
-As mentioned, this rhythmic complexity certainly does not let up in his later works. These pieces may sometimes show a vague pulse that you can follow, but that often quickly dissipates into a fluid texture. The appropriate use of rubato also certainly plays a role. The resulting tempogram therefore also does not tell us much.
+***
+--TEXT--
 
-Aside from all the previously mentioned qualities that these pieces share, it might also be worth mentioning the length of these pieces. While the late sonatas certainly are not among the longest of pieces, being only around 10 minutes long, they nonetheless contain quite a bit of material. When considering all factors, these pieces might also lend themselves to a greater variance in interpretation compared to, say, a late Scriabin prelude of only around a minute long. There simply is a lot more material for an experienced pianist to play around with, to put it one way. Regardless, this is also in a way simply a reinforcement of the fitting use of rubato and presence of complex rhythms.
+<!-- your comment -->
 
 
+### Clustering
+```{r cache=TRUE}
+sonatas_clustering <-
+  all_recordings |>
+  mutate(
+    segments = map2(segments, key, compmus_c_transpose),
+    pitches =
+      map(segments,
+        compmus_summarise, pitches,
+        method = "mean", norm = "manhattan"
+      ),
+    timbre =
+      map(
+        segments,
+        compmus_summarise, timbre,
+        method = "mean"
+      )
+  ) |>
+  mutate(pitches = map(pitches, compmus_normalise, "clr")) |>
+  mutate_at(vars(pitches, timbre), map, bind_rows) |>
+  unnest(cols = c(pitches, timbre))
+```
+
+```{r}
+sonatas_juice <-
+  recipe(
+    identifier ~
+      # danceability +
+      energy +
+      loudness +
+      # speechiness +
+      # acousticness +
+      # instrumentalness +
+      # liveness +
+      valence +
+      # tempo +
+      # duration +
+      C + `C#|Db` + D + `D#|Eb` +
+      E + `F` + `F#|Gb` + G +
+      `G#|Ab` + A + `A#|Bb` + B +
+      c01 + c02 + c03 + c04 + c05 + c06 +
+      c07 + c08 + c09 + c10 + c11 + c12,
+    data = sonatas_clustering
+  ) |>
+  step_center(all_predictors()) |>
+  step_scale(all_predictors()) |> 
+  # step_range(all_predictors()) |> 
+  prep(sonatas_clustering |> mutate(identifier = str_trunc(identifier, 20))) |>
+  juice() |>
+  column_to_rownames("identifier")
+```
+
+```{r}
+sonatas_dist <- dist(sonatas_juice, method = "euclidean")
+
+data_for_sonata_clustering <- sonatas_dist |> 
+  hclust(method = "average") |> # average for a balanced tree!
+  dendro_data() 
+
+playlist_data_for_join <- sonatas_clustering %>%
+  select(identifier, period) %>%
+  mutate(label = str_trunc(identifier, 20))
+
+data_for_sonata_clustering$labels <- data_for_sonata_clustering$labels %>%
+  left_join(playlist_data_for_join)
+
+# Add factor so can use colouring! 
+data_for_sonata_clustering$labels$label <- factor(data_for_sonata_clustering$labels$label)
+```
+
+```{r}
+data_for_sonata_clustering |>
+  ggdendrogram() +
+  geom_text(data = label(data_for_sonata_clustering), aes(x, y, 
+                                   label=label, 
+                                   hjust=0, 
+                                   colour=period), size=3) +
+  coord_flip() + 
+  scale_y_reverse(expand=c(0.2, 0)) +
+  theme(axis.line.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.title.y=element_blank(),
+        panel.background=element_rect(fill="white"),
+        panel.grid=element_blank()) +
+  labs(title = "Period") +
+  guides(
+    colour = guide_legend(
+      title = "Period"
+    )
+  ) +
+  scale_color_manual(values = cols)
+```
+
+***
+I'm probably going to remove this one since I don't think it's as interesting as the classification, so enjoy it while it lasts ¯\_(ツ)_/¯.
 
 
 ### The style of Scriabin
@@ -305,29 +628,6 @@ As expected, different pianist show quite a different spread when it comes to th
 As mentioned however, we should take these values with a grain of salt. When looking at the 7th sonata again, Ashkenazy's mean bpm is around 70, while Alexeev's is around 170. You can not take away that Alexeev is playing this piece twice as fast from these numbers however, since both recordings are around 12 minutes long.
 
 
-### Spotify is not very certain about the late sonata's keys
-```{r keys_sonatas}
-all_recordings %>%
-  mutate(key_name = factor(key_name, levels = pitch_classes)) %>%
-  filter(sonata >= 5, 
-         movement == 1) %>%
-  ggplot(aes(alpha = key_confidence, x = key_name, fill = pianist)) +
-  geom_bar() +
-  scale_fill_viridis_d() +
-  scale_alpha(range=c(0.15, 1)) +
-  facet_wrap(~ factor(sonata, labels = sonata_names), nrow = 3) + 
-  labs(title = "Spotify key analysis", y = "", fill = "pianist", alpha = "confidence") +
-  scale_x_discrete("Key", drop=FALSE) +
-  facet_colour
-```
-
-***
-Taking a look at the later half of Scriabin's sonatas, it quickly becomes clear that Spotify has a harder time finding a key to stick with. Perhaps not unexpectedly so, since these pieces do not adhere to traditional tonality, as mentioned. While there might not be much of a point to trying to identify a key in these pieces, not to mention how Spotify's analysis is probably not the best fit for unconventional music in general, it's still interesting to see how it even fails to agree on a pitch across different recordings.
-
-Perhaps different pianists might naturally bring forward different pitches throughout these kinds of pieces, consciously or not. Or perhaps this is a result of the recording process, where different equipment, studios and 'finishing touches' might alter the pitch content of a recording.
-
-On top of that, the key confidence feature also shows that Spotify itself is aware of its uncertainty to some degree. I've mapped Spotify's key_confidence feature to the opacity value of each recording. Some of the recordings are noticeably more opaque than the rest, but it's difficult to tell what might have caused that other than the fact that these pieces are simply tonally ambiguous.
-
 
 ### How clearly does a chromagram show a sonata's key?
 
@@ -399,11 +699,9 @@ plot_grid(plotlist = ashk_2_4_chromaplot, ncol = 1)
 ```
 
 ***
---OLD TEXT--
-Throughout Scriabin's carreer as a composer, you can quite clearly hear how his music starts getting more and more tonally ambiguous. Even to the point where it might not make much sense to discuss it in terms of tonality.
+The Spotify API allows us to retrieve a track's pitch content. That data can be used to create a chromagram, which displays the distribution of energy in each pitch class over the course of the recording. If a piece were to clearly be in the key of A for instance, a chromagram of its recording is likely going to reflect this for instance.
 
-Take the following chromagrams of the 4th and 5th sonata for example. It is not far fetched to say that Scriabin's music has changed the most between these pieces. As a result, you can, albeit without the most confidence, observe how this piece is in F#. The 5th sonata on the other hand does not display display a clear tonic like the previous one does, which makes sense upon giving it a listen.
---OLD TEXT--
+Scriabin's early sonatas are somewhat traditional when it comes to harmony. His pieces at this point of his career usually have an unambiguous tonal center. Take his 3rd and 4th sonatas for instance. These pieces are respectively in F#-minor and F#-major, and as expected, their chromagrams show how those pitches are fairly prevalent in both pieces. Especially at the end of each movement.
 
 ### Tonality is identifyable in early works...
 ```{r chord_masks, include=FALSE}
@@ -682,7 +980,31 @@ plot_grid(plotlist = chroma_ashkenazy, ncol = 1)
 ```
 
 ***
--- ADD TEXT --
+Throughout Scriabin's career as a composer, you can quite clearly hear how his music starts getting more and more tonally ambiguous. Even to the point where it might not make much sense to discuss it in terms of tonality. If we attempt to create chromagrams of his later sonatas, we can see how this is indeed the case. The chromagrams of his 5th and 8th sonatas are quite the mess, notably when comparing them to the chromagrams of his 3rd and 4th.
+
+### Spotify is not very certain about the late sonata's keys
+```{r keys_sonatas}
+all_recordings %>%
+  mutate(key_name = factor(key_name, levels = pitch_classes)) %>%
+  filter(sonata >= 5, 
+         movement == 1) %>%
+  ggplot(aes(alpha = key_confidence, x = key_name, fill = pianist)) +
+  geom_bar() +
+  scale_fill_viridis_d() +
+  scale_alpha(range=c(0.15, 1)) +
+  facet_wrap(~ factor(sonata, labels = sonata_names), nrow = 3) + 
+  labs(title = "Spotify key analysis", y = "", fill = "pianist", alpha = "confidence") +
+  scale_x_discrete("Key", drop=FALSE) +
+  facet_colour
+```
+
+***
+Taking a look at the later half of Scriabin's sonatas, it quickly becomes clear that Spotify has a harder time finding a key to stick with. Perhaps not unexpectedly so, since these pieces do not adhere to traditional tonality, as mentioned. While there might not be much of a point to trying to identify a key in these pieces, not to mention how Spotify's analysis is probably not the best fit for unconventional music in general, it's still interesting to see how it even fails to agree on a pitch across different recordings.
+
+Perhaps different pianists might naturally bring forward different pitches throughout these kinds of pieces, consciously or not. Or perhaps this is a result of the recording process, where different equipment, studios and 'finishing touches' might alter the pitch content of a recording.
+
+On top of that, the key confidence feature also shows that Spotify itself is aware of its uncertainty to some degree. I've mapped Spotify's key_confidence feature to the opacity value of each recording. Some of the recordings are noticeably more opaque than the rest, but it's difficult to tell what might have caused that other than the fact that these pieces are simply tonally ambiguous.
+
 
 
 ### Aligning different performances
@@ -730,7 +1052,9 @@ DTW_plot
 
 We previously saw how the 7th sonata seemed to be played quite differently when it came to [tempo](). We can look into this a little further using the recordings´ chromagrams. Besides showing us the pitch content of a recording, they can also be used to align different performances of the same music. To put it shortly, this is done by matching similar segments of the chromagrams.
 
-The alignment itself can be seen in the darkblue diagonal line in this plot. We can for instance see how Letberg and Ashkenazy were playing the same musical fragment at around 300 and 270 respectively. As expected, the performers don't quite seem to be in sync.
+The alignment itself can be seen in the dark blue diagonal line in this plot. We can for instance see how Letberg and Ashkenazy were playing the same musical fragment at around 300 and 270 respectively. As expected, the performers don't quite seem to be in sync.
+
+
 
 ### It is difficult to gather much information out of timbre
 
@@ -934,3 +1258,54 @@ As Scriabin started breaking away from conventional late-romanticism, he also be
 When specifically looking at the matrices of the eight sonata, we can once more see instances of prolonged silence in the timbre matrix. We can also once again clearly see the distinction of the <i>introduction</i> compared to the rest of the piece. Truthfully, once you start to thoroughly analyse this piece, you'll find that it does follow some semblance of sonata form [as seen here](http://www.scriabin-association.com/skryabins-eighth-sonata-composers-last-word-sonata-form-simon-nicholls/).
 
 However it does not really show in either matrix, as expected. You can vaguely make out how the piece cycles through different harmonic material in the pitch matrix, although this is by no means a strong indication of its structure. For instance, what one could consider the <i>exposition</i> and <i>recapitulation</i> of this sonata, begin at 150 seconds and 550 seconds respectively, but this is not reflected in either plot. While these sections may be musically similar, they are harmonically quite different and the timbre matrix is generally only helpful in identifying silent parts in the recording. One small moment of silence can actually be seen preceding the aforementioned recapitulation at 550 seconds.
+
+
+
+### His early sonata's often have an unstable pulse
+
+```{r display_plot_3_2}
+tempogram_3_2 <- readRDS(file = "data/plots/tempogram_3_2.RDS")
+tempogram_3_2
+```
+
+***
+```{=html}
+<iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/1mAFblavddIx3EkA4O9xwG?utm_source=generator&theme=0" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" data-external="1"></iframe>
+```
+
+We can also attempt to analyse a recording's tempo by finding its most consistent frequency between onsets. The Spotify API does a lot of the heavy lifting by providing us with a recording's onsets. Those can be used to make a Fourier-based tempogram which shows us at what frequency the onsets appear throughout the recording.
+
+Some music is very suitable for these kinds of analyses, other music is a little less suitable. Our corpus unfortunately falls under the latter. Scriabin's music is generally very free in expression and tempo, which was not uncommon for a late-romantic, or early modernist composer. It is therefore also not unexpected that performers play his music with a lot of rubato. You can see how the tempogram of the second movement of his third sonata is quite literally all over the place, which is in my opinion one of the more 'rhythmically stable' parts of his sonatas.
+
+This is another problem apart from the natural use of rubato. The 'beat' in Scriabin's music, like that of some of his contemporaries, is often very obscure to begin with. His frequent use of different polyrhythm and triplets, quintuplets or even septuplets, all contribute to creating rhythmically complex passages, To great effect in especially his later sonatas.
+
+### His late sonata's crank it up a notch
+
+```{r tempogram_function}
+plot_tempogram <- function(sonata) {  
+  sonata %>%
+  tempogram(window_size = 8, hop_size = 1, cyclic = TRUE) |>
+  ggplot(aes(x = time, y = bpm, fill = power)) +
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +
+  labs(x = "Time (s)", y = "Tempo (BPM)") +
+  theme_classic()
+}
+```
+
+```{r display_tempogram_10}
+tempogram_10 <- readRDS(file = "data/plots/tempogram_10.RDS")
+tempogram_10
+```
+
+***
+```{=html}
+<iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/0AfNaqqufBWDkWKMiDeBGZ?utm_source=generator&theme=0" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"  data-external="1"></iframe>
+```
+
+As mentioned, this rhythmic complexity certainly does not let up in his later works. These pieces may sometimes show a vague pulse that you can follow, but that often quickly dissipates into a fluid texture. The appropriate use of rubato also certainly plays a role. The resulting tempogram therefore also does not tell us much.
+
+Aside from all the previously mentioned qualities that these pieces share, it might also be worth mentioning the length of these pieces. While the late sonatas certainly are not among the longest of pieces, being only around 10 minutes long, they nonetheless contain quite a bit of material. When considering all factors, these pieces might also lend themselves to a greater variance in interpretation compared to, say, a late Scriabin prelude of only around a minute long. There simply is a lot more material for an experienced pianist to play around with, to put it one way. Regardless, this is also in a way simply a reinforcement of the fitting use of rubato and presence of complex rhythms.
+
+
+
