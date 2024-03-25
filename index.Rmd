@@ -167,7 +167,11 @@ ggplotly(ml_data_plot)
 ```
 
 ***
---TEXT--
+We can use this data on Scriabin's music to try out some machine learning tasks. Since there is a general consensus on which period of Scriabin's career each sonata belongs to, can this same consensus be extracted from just the data? This sounds like a classic supervised learning classification task, since we have labelled data which we want our model to predict.
+
+To proceed, we need to divide our data in a set that will be used for training our model and one that will be used for testing its performance. Since these task rely on having access to sufficient and varied data, it might prove fruitful to extend our original corpus. The recordings of two new pianists have been added, namely Vladimir Sofronitsky and Marc-André Hamelin.
+
+
 
 ### Random forest results.
 ```{r class_functions}
@@ -335,7 +339,7 @@ ggplotly(test_predict)
 ```
 
 ***
---TEXT--
+The actual model that we will use to predict a sonata's period will be a random forest. 
 
 ### Test results
 
