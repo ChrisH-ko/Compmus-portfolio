@@ -80,7 +80,9 @@ sonata_names <- c("Sonata 5", "Sonata 6", "Sonata 7", "Sonata 8", "Sonata 9", "S
 cols <- c("Early" = "#c2df23", "Middle" = "#1fa187", "Late" = "#440154")
 pitch_classes <- c("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
 facet_colour <- theme(strip.background = element_rect(fill = "#47b59f"),
-                      strip.text = element_text(colour = "#ffffff"))
+                      strip.text = element_text(colour = "#ffffff",
+                                                size = 12),
+                      plot.title = element_text(size = 16))
 
 minute_scalex <- scale_x_continuous(breaks=seq(0,2000,60))
 minute_scaley <- scale_y_continuous(breaks=seq(0,2000,60))
@@ -89,23 +91,20 @@ minute_scaley <- scale_y_continuous(breaks=seq(0,2000,60))
 ### Applying supervised learning on Scriabin
 
 ```{r test_set_load, cache=TRUE}
-sofrontsky <- get_playlist_audio_features("", "1Dm4bMspnpHqQxFd77xJ6O") |>
-  add_audio_analysis() %>%
-  mutate(sonata = as.numeric(gsub(".*?([0-9]+).*", "\\1", track.name))) %>%
-  mutate(pianist = "Vladimir Sofronitsky") %>%
-  group_by(sonata) %>%
-  mutate(movement = as.character(row_number()))
-
-hamelin <- get_playlist_audio_features("", "6DqxZs1asow4mttEUzXm9A") |>
-  add_audio_analysis() %>%
-  mutate(sonata = as.numeric(gsub(".*?([0-9]+).*", "\\1", track.name))) %>%
-  mutate(pianist = "Marc-André Hamelin") %>%
-  group_by(sonata) %>%
-  mutate(movement = as.character(row_number()))
+sofrontsky <- readRDS(file = "data/playlists/sofrontsky-playlist.RDS")
+hamelin <- readRDS(file = "data/playlists/hamelin-playlist.RDS")
+ugorski <- readRDS(file = "data/playlists/ugorski-playlist.RDS")
+szidon <- readRDS(file = "data/playlists/szidon-playlist.RDS")
+maltempo <- readRDS(file = "data/playlists/szidon-playlist.RDS")
 ```
 
 ```{r new_recordings_process}
-new_pianists <- bind_rows(list(sofrontsky, hamelin)) %>%
+new_pianists <- bind_rows(list(sofrontsky,
+                               hamelin,
+                               ugorski,
+                               szidon,
+                               maltempo
+                               )) %>%
     mutate(period = replace(sonata, sonata < 11, "Late")) %>%
     mutate(period = replace(period, sonata < 6, "Middle")) %>%
     mutate(period = replace(period, sonata < 4, "Early")) %>%
@@ -136,14 +135,38 @@ features <-
   mutate(pitches = map(pitches, compmus_normalise, "clr")) |>
   mutate_at(vars(pitches, timbre), map, bind_rows) |>
   unnest(cols = c(pitches, timbre)) %>%
-  select(energy, valence, sonata:c12)
+  select(energy,
+         valence,
+         sonata:c12
+         )
 ```
+
+```{r set_train_test}
+set.seed(2)
+features <- features %>%
+  mutate(set = "Train set")
+
+class_size <- 10
+
+early_ids <- sample(which(features$period == "Early"))[1:class_size]
+middle_ids <- sample(which(features$period == "Middle"))[1:class_size]
+late_ids <- sample(which(features$period == "Late"))[1:class_size]
+
+
+features[c(early_ids, middle_ids, late_ids), ]$set <- "Test set"
+# features %>% filter(set == "Test set")
+```
+
 
 ```{r train_test_split}
 set.seed(2)
-sonatas_split <- initial_split(features, prop = 2/3)
-train_sonatas <- training(sonatas_split) %>% mutate(set = "Train set")
-test_sonatas <- testing(sonatas_split) %>% mutate(set = "Test set")
+train_id <- which(features$set == "Train set")
+
+sonatas_split <- initial_split(features)
+sonatas_split$in_id <- train_id
+
+train_sonatas <- training(sonatas_split)
+test_sonatas <- testing(sonatas_split)
 ```
 
 ```{r train_test_plot}
@@ -169,7 +192,19 @@ ggplotly(ml_data_plot)
 ***
 We can use this data on Scriabin's music to try out some machine learning tasks. Since there is a general consensus on which period of Scriabin's career each sonata belongs to, can this same consensus be extracted from just the data? This sounds like a classic supervised learning classification task, since we have labelled data which we want our model to predict.
 
-To proceed, we need to divide our data in a set that will be used for training our model and one that will be used for testing its performance. Since these task rely on having access to sufficient and varied data, it might prove fruitful to extend our original corpus. The recordings of two new pianists have been added, namely Vladimir Sofronitsky and Marc-André Hamelin.
+We will try to predict the period of Scriabin's career a track belongs to, based on the data Spotify's API provides, by means of a random forest. To proceed however, we might need to take a couple factors into account first. 
+
+The 4 pianists' recordings seemed to be sufficient for our analysis thus far, but when training these kinds of models, this small sample of recordings might not provide enough quality data. Our dataset is also quite unbalanced to begin with, containing very little middle period tracks compared to early ones. Not to mention how we also need to have extra data on hand that won't be used during the training process in order to properly test our model. so for these reasons, it might not be a bad idea to extend our original corpus with more recordings. The Scriabin sonata recordings of the following pianists have been added:
+
+- Vladimir Sofronitsky
+- Marc-André Hamelin
+- Anatol Ugorski
+- Roberto Szidon
+- Vincenzo Maltempo
+
+This way, we have ample data to train our model with, while still being able to create a balanced test split. Otherwise the model could simply classify every recording to be an early work and still retain a relatively high accuracy.
+
+Aside from that, we also need to decide which features the model will base it's classifications on. Specifically for our corpus, the features Spotify provides often say way to much, such as duration, or say way to little, such as acousticness. This is simply due to the nature of our corpus and the nature of the features Spotify provides. I personally am most interested in seeing if the model is able to perform well using just the audio content of the tracks, and will therefore only provide the model with the pitch and timbre features.
 
 
 
@@ -227,7 +262,7 @@ train_cv <- train_sonatas |> vfold_cv(5)
 forest_model <-
   rand_forest(
     mtry = tune(),
-    trees = 500,
+    trees = 1000,
     min_n = tune()) |>
   set_mode("classification") |> 
   set_engine("ranger", importance = "impurity")
@@ -269,7 +304,7 @@ broad_tune %>%
 ```{r finer_tune, cache=TRUE, include=FALSE}
 finer_grid <- grid_regular(
   mtry(range = c(1, 7)),
-  min_n(range = c(1, 30)),
+  min_n(range = c(1, 40)),
   levels = 5
 )
 
@@ -339,7 +374,7 @@ ggplotly(test_predict)
 ```
 
 ***
-The actual model that we will use to predict a sonata's period will be a random forest. 
+These are the results of fitting our model to the training data after fine tuning it's hyper parameters. 
 
 ### Test results
 
@@ -354,107 +389,9 @@ test_sonatas %>%
 ```
 
 ***
---TEXT--
+Taking a closer look at the actual performance on the test set.
 
 <!-- your comment -->
-
-
-### Clustering
-```{r cache=TRUE}
-sonatas_clustering <-
-  all_recordings |>
-  mutate(
-    segments = map2(segments, key, compmus_c_transpose),
-    pitches =
-      map(segments,
-        compmus_summarise, pitches,
-        method = "mean", norm = "manhattan"
-      ),
-    timbre =
-      map(
-        segments,
-        compmus_summarise, timbre,
-        method = "mean"
-      )
-  ) |>
-  mutate(pitches = map(pitches, compmus_normalise, "clr")) |>
-  mutate_at(vars(pitches, timbre), map, bind_rows) |>
-  unnest(cols = c(pitches, timbre))
-```
-
-```{r}
-sonatas_juice <-
-  recipe(
-    identifier ~
-      # danceability +
-      energy +
-      loudness +
-      # speechiness +
-      # acousticness +
-      # instrumentalness +
-      # liveness +
-      valence +
-      # tempo +
-      # duration +
-      C + `C#|Db` + D + `D#|Eb` +
-      E + `F` + `F#|Gb` + G +
-      `G#|Ab` + A + `A#|Bb` + B +
-      c01 + c02 + c03 + c04 + c05 + c06 +
-      c07 + c08 + c09 + c10 + c11 + c12,
-    data = sonatas_clustering
-  ) |>
-  step_center(all_predictors()) |>
-  step_scale(all_predictors()) |> 
-  # step_range(all_predictors()) |> 
-  prep(sonatas_clustering |> mutate(identifier = str_trunc(identifier, 20))) |>
-  juice() |>
-  column_to_rownames("identifier")
-```
-
-```{r}
-sonatas_dist <- dist(sonatas_juice, method = "euclidean")
-
-data_for_sonata_clustering <- sonatas_dist |> 
-  hclust(method = "average") |> # average for a balanced tree!
-  dendro_data() 
-
-playlist_data_for_join <- sonatas_clustering %>%
-  select(identifier, period) %>%
-  mutate(label = str_trunc(identifier, 20))
-
-data_for_sonata_clustering$labels <- data_for_sonata_clustering$labels %>%
-  left_join(playlist_data_for_join)
-
-# Add factor so can use colouring! 
-data_for_sonata_clustering$labels$label <- factor(data_for_sonata_clustering$labels$label)
-```
-
-```{r}
-data_for_sonata_clustering |>
-  ggdendrogram() +
-  geom_text(data = label(data_for_sonata_clustering), aes(x, y, 
-                                   label=label, 
-                                   hjust=0, 
-                                   colour=period), size=3) +
-  coord_flip() + 
-  scale_y_reverse(expand=c(0.2, 0)) +
-  theme(axis.line.y=element_blank(),
-        axis.ticks.y=element_blank(),
-        axis.text.y=element_blank(),
-        axis.title.y=element_blank(),
-        panel.background=element_rect(fill="white"),
-        panel.grid=element_blank()) +
-  labs(title = "Period") +
-  guides(
-    colour = guide_legend(
-      title = "Period"
-    )
-  ) +
-  scale_color_manual(values = cols)
-```
-
-***
-I'm probably going to remove this one since I don't think it's as interesting as the classification, so enjoy it while it lasts ¯\_(ツ)_/¯.
 
 
 ### The style of Scriabin
@@ -510,9 +447,9 @@ ggplotly(zhukov_plot) %>%
 
 ***
 
-This plot displays the valence and energy levels of the sonatas performed by Igor Zhukov, just as an example. If you focus on the valence feature, valence being a measure of positiveness, you might notice that while the differences accross sonatas are small, all the late sonatas seem to lay at a distinct valence level compared to the rest.
+This plot displays the valence and energy levels of the sonatas performed by Igor Zhukov, just as an example. If you focus on the valence feature, valence being a measure of positiveness, you might notice that while the differences across sonatas are small, all the late sonatas seem to lay at a distinct valence level compared to the rest.
 
-Those familiar with the music in question might not be suprised by this. These pieces are very representative of Scriabin's changing musical style, despite the fact that they are individually still unique. 
+Those familiar with the music in question might not be surprised by this. These pieces are very representative of Scriabin's changing musical style, despite the fact that they are individually still unique. The valence feature is Spotify's way of interpreting a piece's 'happiness'. Whether the late sonatas all contain the same degree of happiness, is debatable. It is nonetheless interesting how Spotify is confidentially able to differentiate between the late sonatas and the rest.
 
 
 ### The late sonatas contain similar valence levels accros all performers
@@ -538,7 +475,9 @@ ggplotly(energy_valence_plot)
 
 here you can see the previous results extend very well to other pianists and their recordings. While the energy and valence levels of the early and middle period of Scriabin's works vary quite a bit, the late sonatas all fall on the same range of valence, even across different performers.
 
-At the same time however, the pieces show somewhat of a variance in energy levels across performers. This could perhaps reflect the natural room for interpretation of Scriabin's works, albeit this is hard to say from just this data.
+Whether these pieces are all equally unhappy compared to the rest of the sonatas, is debatable as I've mentioned before. I personally believe that some late sonatas are noticeably more restless in general than others and perhaps deserve a slightly difference valence score than the others. At the end of the day however, we simply don't know the exact way Spotify assigns these scores, not to mention how it likely is not very well tuned to tonally ambiguous modernist piano pieces. Other than that, I think it's save to say that Spotify does seem to do a good job at picking up the fact that the late sonatas sound fundamentally different. It even seems to place the 5th sonata quite often very near to the later ones, which definitely is more similar to those pieces than to the earlier sonatas.
+
+At the same time, the pieces show somewhat of a variance in energy levels across performers. This could perhaps reflect the natural room for interpretation of Scriabin's works, albeit this is hard to say from just this data.
 
 ### A piece's tempo can vary quite a bit accross pianists
 ```{r tempo_plot}
