@@ -1201,6 +1201,8 @@ ggplotly(test_predict)
 ```
 
 ***
+Some of the code used in this section has been taken from the following [blog](https://juliasilge.com/blog/sf-trees-random-tuning/) @Julia_Silge_2020.
+
 The random forest model admits 3 hyper parameters which can be tuned to further improve performance on the provided data. These parameters are:
 
 |parameter          |description                                                    |
