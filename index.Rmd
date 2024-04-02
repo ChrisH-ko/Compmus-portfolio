@@ -1,6 +1,6 @@
 ---
 title: "The Scriabin sonatas"
-author: "Chris"
+author: "Chris Hoes"
 date: "2024-02-21"
 output: 
   flexdashboard::flex_dashboard:
@@ -182,7 +182,7 @@ ggplotly(energy_valence_plot)
 
 ***
 
-here you can see the previous results extend very well to other pianists and their recordings. While the energy and valence levels of the early and middle period of Scriabin's works vary quite a bit, the late sonatas all fall on the same range of valence, even across different performers.
+Here you can see the previous results extend very well to other pianists and their recordings. While the energy and valence levels of the early and middle period of Scriabin's works vary quite a bit, the late sonatas all fall on the same range of valence, even across different performers.
 
 Whether these pieces are all equally unhappy compared to the rest of the sonatas, is debatable as I've mentioned before. I personally believe that some late sonatas are noticeably more restless in general than others and perhaps deserve a slightly difference valence score than the others. At the end of the day however, we simply don't know the exact way Spotify assigns these scores, not to mention how it likely is not very well tuned to tonally ambiguous modernist piano pieces. Other than that, I think it's save to say that Spotify does seem to do a good job at picking up the fact that the late sonatas sound fundamentally different. It even seems to place the 5th sonata quite often very near to the later ones, which definitely is more similar to those pieces than to the earlier sonatas.
 
@@ -1212,7 +1212,7 @@ The random forest model admits 3 hyper parameters which can be tuned to further 
 |min_n              |The minimal number of data points a branch needs to be split.  |
 
 <br>
-The values for these parameters are `r final_rf$args$trees[[2]]`, `r final_rf$args$mtry[[2]]`, and `r final_rf$args$min_n[[2]]` respectively in our final model. At first glance, it seems that the training process went without a hitch. However, the there clearly seem to be some wrong classifications in the testing set. It looks like the model has quite a bit of trouble classifying the middle sonatas. This does make sense, since there are only two pieces that belong to this class, and they are both very different from one another. 
+The values for these parameters are `r final_rf$args$trees[[2]]`, `r final_rf$args$mtry[[2]]`, and `r final_rf$args$min_n[[2]]` respectively in our final model. At first glance, it seems that the training process went without a hitch. However, there clearly seem to be some wrong classifications in the testing set. It looks like the model has quite a bit of trouble classifying the middle sonatas. This does make sense, since there are only two pieces that belong to this class, and they are both very different from one another. 
 
 ### Results of test set
 
