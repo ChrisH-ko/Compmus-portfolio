@@ -6,6 +6,7 @@ output:
   flexdashboard::flex_dashboard:
     storyboard: true
     css: stylesheets/style.css
+bibliography: bibliography/references.bib
 ---
 
 ```{r setup, include=FALSE}
@@ -82,7 +83,7 @@ pitch_classes <- c("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "
 facet_colour <- theme(strip.background = element_rect(fill = "#47b59f"),
                       strip.text = element_text(colour = "#ffffff",
                                                 size = 12),
-                      plot.title = element_text(size = 16, margin=margin(0, 0, 10, 0)))
+                      plot.title = element_text(size = 16, margin=margin(0, 0, 20, 0)))
 
 minute_scalex <- scale_x_continuous(breaks=seq(0,2000,60))
 minute_scaley <- scale_y_continuous(breaks=seq(0,2000,60))
@@ -91,11 +92,25 @@ minute_scaley <- scale_y_continuous(breaks=seq(0,2000,60))
 ### The style of Scriabin
 
 <h4>The style of Scriabin</h4>
-There are many composers who have made a name for themselves when it comes to their contribution to the piano repertoire. One such composer is Alexander Scriabin. However, what separates him from other composers of similar regard, is the way in which his musical language has developed throughout his life. The influence of Frederic Chopin and other romantic composers can clearly be discerned at the start of his career. In spite of that, his music would increasingly veer away from traditional harmony and tonality over the turn of the 20th century. Much like Arnold Schoenberg, he had developed a unique, modernist style of music that would influence many other 20th century composers.
+There are many composers who have made a name for themselves when it comes to their contribution to the piano repertoire. One such composer is Alexander Scriabin. However, what separates him from other composers of similar regard, is the way in which his musical language has developed throughout his life. The influence of Frederic Chopin and other romantic composers can clearly be discerned at the start of his career. In spite of that, his music would increasingly veer away from traditional harmony and tonality over the turn of the 20th century. Much like Arnold Schoenberg, he had developed a unique, modernist style of music that would influence many other 20th century composers. Two notable names that come to mind are [Nikolai Roslavets](https://en.wikipedia.org/wiki/Nikolai_Roslavets) and [Samuil Feinberg](Samuil Feinberg).
 
-One of my goals is to examine whether Scriabin's changing style could be accurately represented. This development is perhaps best reflected in Scriabin's 10 piano sonatas, which span the majority of his composing career. My corpus therefore consists of recordings of these sonatas by four pianists, namely Vladimir Ashkenazy, Maria Lettberg, Igor Zhukov and Dmitri Alexeev. These pieces, much like his other works, leave the performer with room for their own interpretation. So It would perhaps also be interesting to see in what capacity Spotify could measure the difference between performers.
+<h4>This storyboard</h4>
+We are fortunate to have access to a plethora of recordings of his works through Spotify for instance, which is also convieniently able to provide us with a lot of low- or track-level audio features. One of my goals is to examine whether Scriabin's changing style could be accurately represented using this data. This development is perhaps best reflected in Scriabin's 10 piano sonatas, which span the majority of his composing career.  We will therefore take a closer look at the following four pianists who have recorded all of his sonatas.
+- Vladimir Ashkenazy
+- Maria Lettberg
+- Igor Zhukov
+- Dmitri Alexeev
+These are not the only pianists who have recordings of all of Scriabin's sonatas, but considering that we will focus on just comparing the sonatas against each other, these should be plenty. Although it can't hurt to look at the differences of some of the performers of course, as the pieces in question naturally leave the performer with room for interpretation. This is also quite typical of late-romantic/expressionist music.
 
-When considering tracks of particular interest, the 4th and 5th piano sonatas come to mind. The former being one of his first pieces to display a concrete change in style, and the later being one of the first steps into truly new territory. Yet despite their differences they do both have a distinct touch of lightness that is in my opinion more difficult to find in his other sonatas. A further look into these pieces may yield intriguing results.
+Scriabin's music is often divided into three periods that each differ in style [@sabbagh2003development]. For the purpose of comparing his sonatas, it might also be useful to keep these labels in mind.
+
+<div class="Intro_table">
+|Sonata           |Period           |
+|-----------------|----------------:|
+|1, 2, 3          |Early            |
+|4, 5             |Middle           |
+|6, 7, 8, 9, 10   |Late             |
+</div>
 
 ***
 ```{r, echo=FALSE,  out.extra='class="sidebar_img"'}
@@ -338,7 +353,10 @@ plot_grid(plotlist = ashk_2_4_chromaplot, ncol = 1)
 ***
 The Spotify API allows us to retrieve a track's pitch content. That data can be used to create a chromagram, which displays the distribution of energy in each pitch class over the course of the recording. If a piece were to clearly be in the key of A for instance, a chromagram of its recording is likely going to reflect this for instance.
 
-Scriabin's early sonatas are somewhat traditional when it comes to harmony. His pieces at this point of his career usually have an unambiguous tonal center. Take his 3rd and 4th sonatas for instance. These pieces are respectively in F#-minor and F#-major, and as expected, their chromagrams show how those pitches are fairly prevalent in both pieces. Especially at the end of each movement.
+Scriabin's early sonatas are somewhat traditional when it comes to harmony. His pieces at this point of his career usually have an unambiguous tonal center. Take his 3rd and 4th sonatas for instance. The greyish lines indecate the start of a new movement.
+
+These pieces are respectively in F#-minor and F#-major, and as expected, their chromagrams show how those pitches are fairly prevalent in both pieces. Especially towards the end of each piece and some of the movements, as it is standard practice for this kind of music to end a piece on the tonic. In the final moments of both pieces, you can clearly see most energy in the F# and C# pitch classes, both notes belonging to the F# major and minor chords. The third of the chords are a bit harder to see in the chromagram, but either way, the 3rd sonata ends in F# minor and the 4th in F# major.
+
 
 ### Tonality is identifyable in early works...
 ```{r chord_masks, include=FALSE}
@@ -553,11 +571,11 @@ key_2_1
 <iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/0zKZR4PiuC60TpDRo9VWWZ?utm_source=generator&theme=0" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" data-external="1"></iframe>
 ```
 
-We can use a recording's pitch content to try and estimate its key and which chords appear in it. An example of this can be seen here for the first movement of the second sonata in G# minor. This piece can quite easily be described in sonata form, with the exposition starting in G# minor as expected, briefly going to D# minor before largely remaining in B major.
+We can take this a step further by using a recording's chromagram to try and estimate its key and which chords appear in it. An example of this can be seen here for the first movement of the second sonata in G# minor. This piece can quite easily be described in sonata form, with the exposition starting in G# minor as expected, briefly going to D# minor before largely remaining in B major.
 
 The development section continues in B major, before quickly and briefly shifting to D major, G minor, C minor, F minor and eventually leads back to G# minor. The recapitulation continues on in G# minor, before quickly modulating to the relative E major and remaining there until the end of the movement.
 
-These key changes are reflected quite well in the keygram, although it certainly helps to know them beforehand.
+These key changes are reflected quite well in the keygram, although it certainly helps to know them beforehand. On top of that, I've had to add some extra processing steps in order to get these results. The time intervals Spotify provides do not always quite help in properly visualizing harmonic changes. I took the bar intervals spotify provided, grouped them in groups of 4, and took the average pitch content in each group. Reason being is that western musical material is often quite naturally grouped in bars of 4. I've also put the results of the key-template matching on a log scale for a more clear plot.
 
 
 ### What about the later sonatas?
@@ -574,12 +592,12 @@ key_9_1
 
 There's a lot that can be said about Scriabin's harmonic language. One important aspect of his later works is how, to a fair extent, it's based on unique scales and chords such as the [octatonic scale](https://en.wikipedia.org/wiki/Octatonic_scale) or the ['mystic' chord](https://en.wikipedia.org/wiki/Mystic_chord). I've tried to create a mask of one of the organizations of the octatonic scale for each pitch class to see if it may yield interesting results for the 9th sonata.
 
-It is admittedly quite hard to say whether these results hold any weight. The plot does seem to consistently mark certain sections to use a certain octatonic scale. I've looked through the score and confirmed that some of these sections do indeed use the pitches of these octatonic scales. However, the same cannot be said for the other sonatas, some of which also do make use of this scale. There's also the fact that my mask only makes a distinction with the key's 'starting' pitch, the pitches within the octatonic scale and the rest of the pitches. The masks is very simple and likely does not properly convey to which degree each pitch supports an octatonic key.
+It is admittedly quite hard to say whether these results hold any weight. The plot does seem to consistently mark certain sections to use a certain octatonic scale. I've looked through the score and confirmed that some of these sections do indeed contain the relevant pitches of these scales. However, the same cannot be said for the other sonatas, some of which seem to make even more use of this scale [@2823f5d6-f48c-302d-997a-501add2c84ab]. There's also the fact that my mask only makes a distinction with the key's 'starting' pitch, the pitches within the octatonic scale and the rest of the pitches. The masks is very simple and likely does not properly convey to which degree each pitch supports an octatonic key.
 
 
 ### From the 5th sonata, each sonata's key starts getting more ambiguous
 
-```{r load_ashkenazy, include=FALSE, cache=TRUE}
+```{r load_ashkenazy, include=FALSE}
 ashkenazy_5_1 <- ashkenazy %>% filter(sonata == 5, movement == 1)
 ashkenazy_6_1 <- ashkenazy %>% filter(sonata == 8, movement == 1)
 
@@ -617,7 +635,9 @@ plot_grid(plotlist = chroma_ashkenazy, ncol = 1)
 ```
 
 ***
-Throughout Scriabin's career as a composer, you can quite clearly hear how his music starts getting more and more tonally ambiguous. Even to the point where it might not make much sense to discuss it in terms of tonality. If we attempt to create chromagrams of his later sonatas, we can see how this is indeed the case. The chromagrams of his 5th and 8th sonatas are quite the mess, notably when comparing them to the chromagrams of his 3rd and 4th.
+Indeed, throughout Scriabin's career as a composer, you can quite clearly hear how his music starts getting more and more tonally ambiguous. Even to the point where it might not make much sense to discuss it in terms of tonality. If we attempt to create chromagrams of his later sonatas, the results somewhat show that this is the case. The chromagrams of his 5th and 8th sonatas are quite the mess, notably when comparing them to the previous chromagrams of his 3rd and 4th.
+
+While the 5th sonata may not be part of the late ones, giving it a listen shows that it is still clearly a work where Scriabin started getting inventive. This makes it musically a lot more similar to his late sonatas than to the preceding ones in my opinion. I'd also say that this fact is somewhat displayed in it's chromagram.
 
 ### Spotify is not very certain about the late sonata's keys
 ```{r keys_sonatas}
@@ -636,7 +656,7 @@ all_recordings %>%
 ```
 
 ***
-Taking a look at the later half of Scriabin's sonatas, it quickly becomes clear that Spotify has a harder time finding a key to stick with. Perhaps not unexpectedly so, since these pieces do not adhere to traditional tonality, as mentioned. While there might not be much of a point to trying to identify a key in these pieces, not to mention how Spotify's analysis is probably not the best fit for unconventional music in general, it's still interesting to see how it even fails to agree on a pitch across different recordings.
+Taking a look at the later half of Scriabin's sonatas alltogether, it quickly becomes clear that Spotify has a hard time finding a key to stick with. Perhaps not unexpectedly so, since these pieces do not adhere to traditional tonality, as mentioned. While there might not be much of a point to trying to identify a key in these pieces, not to mention how Spotify's analysis is probably not the best fit for unconventional music in general, it's still interesting to see how it even fails to agree on a pitch across different recordings.
 
 Perhaps different pianists might naturally bring forward different pitches throughout these kinds of pieces, consciously or not. Or perhaps this is a result of the recording process, where different equipment, studios and 'finishing touches' might alter the pitch content of a recording.
 
@@ -687,7 +707,7 @@ DTW_plot
 <iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/7EYRKteYYguJuCMvH1MA2e?utm_source=generator&theme=0" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" data-external="1"></iframe>
 ```
 
-We previously saw how the 7th sonata seemed to be played quite differently when it came to [tempo](). We can look into this a little further using the recordings´ chromagrams. Besides showing us the pitch content of a recording, they can also be used to align different performances of the same music. To put it shortly, this is done by matching similar segments of the chromagrams.
+We previously saw how the 7th sonata seemed to be played quite differently when it came to tempo (see <i>A piece’s tempo can vary quite a bit accross pianists</i>). We can look into this a little further using the recordings´ chromagrams. Besides showing us the pitch content of a recording, they can also be used to align different performances of the same music. To put it shortly, this is done by matching similar segments of the chromagrams.
 
 The alignment itself can be seen in the dark blue diagonal line in this plot. We can for instance see how Letberg and Ashkenazy were playing the same musical fragment at around 300 and 270 respectively. As expected, the performers don't quite seem to be in sync.
 
@@ -750,68 +770,6 @@ self_similarity <- function(sonata, chroma) {
     scale_y_continuous(breaks=seq(0,2000,60)) +
     theme(axis.text.x = element_text(angle=-45))
 }
-
-compmus_test <- function(dat, feature, method = "euclidean") {
-  feature <- enquo(feature)
-  compmus_test2(dat, dat, !!feature, method)
-}
-
-compmus_test2 <- function(xdat, ydat, feature, method = "euclidean") {
-  feature <- enquo(feature)
-
-  ## Supported functions
-
-  manhattan <- function(x, y) sum(abs(x - y))
-  euclidean <- function(x, y) sqrt(sum((x - y)^2))
-  chebyshev <- function(x, y) max(abs(x - y))
-  pearson <- function(x, y) 1 - cor(x, y)
-  cosine <- function(x, y) {
-    1 - sum(compmus_normalise(x, "euc") * compmus_normalise(y, "euc"))
-  }
-  angular <- function(x, y) 2 * acos(1 - cosine(x, y)) / pi
-  aitchison <- function(x, y) {
-    euclidean(compmus_normalise(x, "clr"), compmus_normalise(y, "clr"))
-  }
-
-  ## Method aliases
-
-  METHODS <-
-    list(
-      manhattan = manhattan,
-      cityblock = manhattan,
-      taxicab = manhattan,
-      L1 = manhattan,
-      totvar = manhattan,
-      euclidean = euclidean,
-      L2 = euclidean,
-      chebyshev = chebyshev,
-      maximum = chebyshev,
-      pearson = pearson,
-      correlation = pearson,
-      cosine = cosine,
-      angular = angular,
-      aitchison = aitchison
-    )
-
-  ## Function selection
-
-  if (!is.na(i <- pmatch(method, names(METHODS)))) {
-    dplyr::full_join(
-      xdat %>%
-        dplyr::select(xstart = start, xduration = duration, x = !!feature),
-      ydat %>%
-        dplyr::select(ystart = start, yduration = duration, y = !!feature),
-      by = character()
-    ) %>%
-      dplyr::transmute(
-        xstart, xduration,
-        ystart, yduration,
-        timb = purrr::map2_dbl(x, y, METHODS[[i]])
-      )
-  } else {
-    stop("The method name is ambiguous or the method is unsupported.")
-  }
-}
 ```
 
 ```{r sonata_1_8_preproces}
@@ -846,7 +804,7 @@ plot_grid(plotlist = list(cep_1, cep_8), ncol = 1)
 
 ***
 Similarly to the chromagrams, spotify also allows us to analyse the timbre content of the pieces, referred to as Cepstrograms.
-However, solo piano works don't always lend themselves to this type of analysis, since you are generally limited in the kinds of timbres
+However, solo piano works don't always lend themselves well to this type of analysis, since you are generally limited in the kinds of timbres
 you can create with just a piano, unless you start employing extended techniques like in [George Crumb's](https://youtu.be/pIEUS0-DDcs) case for instance. Regardless, there are instances where a pieces's eccentricities are reflected in its cepstrogram.
 
 Consider a sonata's structure for example. One defining aspect of the sonata is how its first movement is composed in sonata form. Although like most musical conventions, composers have been straying from this practice over time, including Scriabin. Despite that, his first sonata does display a strong semblance of sonata form. When looking at the cepstrogram, you can make out how the exposition section is repeated once in the sonata's beginning.
@@ -869,7 +827,7 @@ plot_grid(plotlist = list(selfsim_chroma_1, selfsim_timbre_1)) + labs(title = "S
 <iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/0GAbhHPecfDF8LBYTwNmQO?utm_source=generator&theme=0" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" data-external="1"></iframe>
 ```
 
-These plots display the pitch and timbre-based self-similarity within Scriabin's first sonata. While the Timbre matrix does not seem to divulge much, since the overall timbre of the piece does not vary much, you can still make out how there's one bar after around 150 seconds where there's a large pause. Other than that, the plot does not tell us much.
+These plots display the pitch and timbre-based self-similarity within the first movement of Scriabin's first sonata. While the Timbre matrix does not seem to divulge much, since the overall timbre of the piece does not vary much, you can still make out how there's one bar after around 150 seconds where there's a large pause. Other than that, the plot indeed does not tell us much.
 
 The pitch-based self-similarity matrix on the other hand does clearly display the repetition of the sonata's exposition. As seen in how there's a dark blue line parallel to the diagonal of the matrix, indicating that two different sections of the piece overlap. The development and recapitulation are a bit harder to make out. However if you look closely, you can just barely see a very short dark blue diagonal line starting at 420 seconds on the x axis. This line is very short since the recapitulation almost immediately modulates to a different key.
 
@@ -1246,7 +1204,7 @@ ggplotly(test_predict)
 The random forest model admits 3 hyper parameters which can be tuned to further improve performance on the provided data. These parameters are:
 
 |parameter          |description                                                    |
-|-------------------|---------------------------------------------------------------|
+|-------------------|--------------------------------------------------------------:|
 |trees              |The number of trees in the forest.                             |
 |mtry               |The number of features to base each split on.                  |
 |min_n              |The minimal number of data points a branch needs to be split.  |
@@ -1275,3 +1233,24 @@ Perhaps a neural network model which encodes the entire piece into a single vect
 
 <!-- your comment -->
 
+
+### Taking a step back
+Let's now take a step back to think of what to take away from all of this.
+
+<h4>The main idea</h4>
+It seems that hints of the change in style of Scriabin's music can indeed be found in the data that Spotify provides. The low-level audio features, specifically pitch, can tell us quite a bit about the use of harmony in a track, through Chromagrams for instance. On top of that, There seems to be quite a strong relationship between a piece's period and Spotify's own track-level feature <i>valence</i>, although we do not now what exactly produces this correlation in technical terms. Besides that, we seem to be able to use machine learning to discern early from late works just by pitch and timbre.
+
+On the other hand, there are also a lot of features that are not quite as easily applicable to this kind of music. There's not much to be directly found in things like acousticness, liveness, tempo or timbre for example. Not to mention how Spotify's features were perhaps not entirely created with this music in mind.
+
+That aside, I do believe that representing Scriabin's piano sonatas using Spotify's API can definitely be of use, as there were certainly aspects that showed the differences in the style of his music. Interesting results might pop up when looking at the works of other intrigueing composers with unique styles as well. There is still quite a bit left to be desired from features other than pitch however.
+
+<h4>References</h4>
+
+<div id="refs"></div>
+
+***
+All sonatas:
+
+```{=html}
+<iframe style="border-radius:12px" src="https://open.spotify.com/embed/playlist/3sdlcRjy5BTP7n3wYAv9SM?utm_source=generator&theme=0" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" data-external="1"></iframe>
+```

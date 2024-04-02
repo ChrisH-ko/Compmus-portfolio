@@ -4,6 +4,10 @@
   height: 100%;
 }
 
+.Intro_table {
+  width: 25%;
+}
+
 body{
   font-family: Helvetica;
   font-size: 16pt;
